@@ -8,6 +8,47 @@
 
 ---
 
+## 0. Implementation status and decision log
+
+### 0.1 Progress
+
+| Phase | Status |
+|---|---|
+| Phase 0 — Freeze the implementation contract | ✅ Done — enums, models and constants in `packages/shared` |
+| Phase 1 — Create the repository and applications | ✅ Done — npm workspaces, shared package, lint/format, env templates |
+| Phase 2 — Configure the Firebase project | ⏳ Next — fill `.env` files, enable Blaze, Firestore and Storage |
+| Phases 3–12 | Not started |
+
+### 0.2 Decisions made during implementation
+
+These decisions override anything later in this document that disagrees with them.
+
+| # | Decision | Reason |
+|---|---|---|
+| D1 | **No Firebase CLI files and no Local Emulator Suite.** `firebase.json`, `.firebaserc`, `firestore.rules`, `storage.rules` and `firestore.indexes.json` are not kept in the repository. Rules and indexes are managed in the Firebase console. | Campus-level project; the extra tooling added complexity without assessment value. |
+| D2 | **Both apps connect directly to the real Firebase project** using values in `apps/mobile/.env` and `apps/dashboard/.env`. There is no emulator switch. | Follows D1. |
+| D3 | **Blaze plan is enabled** with a low budget alert. | Cloud Storage for Firebase requires Blaze for new default buckets (effective 3 Feb 2026) and Google Maps requires a billing account. Normal campus usage stays within no-cost allowances. |
+| D4 | **Seed data is loaded with a Node script** (`npm run seed`) that uses the Firebase client SDK and the dashboard `.env`. No service-account key. | Works without emulators, re-runnable, no credentials to leak. |
+| D5 | **Automated tests cover business logic and key components; end-to-end flows are a documented manual test checklist** with screenshots. | Avoids running automated tests against the real project. |
+| D6 | **The Duty Officer links a hazard report to a disaster event when verifying it.** `hazardReports.disasterEventId` is optional and is set in the verification batch. | Accurate UC04 analytics without asking citizens to choose an event. |
+| D7 | **The latest verification decision is copied onto the hazard report** (`latestDecision`) in the same batch. | Mobile *My Reports* can show the outcome and officer remarks without a second query. The `verificationDecisions` collection remains the audit record. |
+| D8 | **Mobile routes live in `apps/mobile/src/app/`**, not `apps/mobile/app/`. | Default of the current Expo template (SDK 57) and its `AGENTS.md`. |
+| D9 | **`app.config.ts` replaces `app.json`.** | Lets the Google Maps Android key come from `.env` instead of being committed. |
+| D10 | **One React version across the monorepo** (`react@19.2.3`, the version Expo SDK 57 requires). The dashboard pins the same version and `@types/react` is pinned at the root. | Duplicate React copies cause runtime errors in Expo monorepos. |
+| D11 | **Timestamps are ISO strings in the shared models.** Each app converts Firestore `Timestamp` ↔ ISO string in its mappers. | Models stay serialisable for SQLite, Zustand and JSON. |
+| D12 | **Shared enums are `as const` arrays with derived union types**, not TypeScript `enum`. | Usable in dropdowns and `z.enum()`, and compatible with the dashboard's `erasableSyntaxOnly` setting. |
+| D13 | **Pure business rules live in `packages/shared/src/rules/`** (capacity, shelter status, verification transitions, provisional/final decision, metric completeness). | Written and unit-tested once, used by both apps. |
+| D14 | **Android package ID is `lk.lankashield.mobile`** (fixed; do not change after the first build). | The Google Maps Android key restriction and EAS credentials depend on it. |
+| D15 | **The EAS project lives in the group's Expo organisation.** In Phase 4, set `owner: '<organisation-slug>'` in `app.config.ts`, then run `npx eas-cli@latest init` from `apps/mobile`. It cannot edit `app.config.ts` itself, so copy the `projectId` it prints into `extra.eas.projectId`. | Every group member can build under the shared organisation. |
+
+### 0.3 Installed versions
+
+Expo SDK 57 · React Native 0.86 · React 19.2.3 · TypeScript 6.0 · Vite 8 · Firebase JS SDK 12.19 · Node 22.
+
+Expo changes between SDK releases. Check the versioned Expo documentation before using an Expo API, and install Expo packages with `npx expo install` from `apps/mobile`.
+
+---
+
 ## 1. Final technical decision
 
 Use two TypeScript front ends connected to one Firebase project:
@@ -146,7 +187,7 @@ flowchart TD
 | Evidence files | Cloud Storage |
 | Application logic | Firebase client SDK, Firestore batch writes and transactions |
 | Notifications | Firestore in-app notifications; Expo local notifications where useful |
-| Local integration testing | Firebase Local Emulator Suite |
+| Seed data | Node script using the Firebase client SDK (`npm run seed`) |
 | Web hosting | Vercel |
 | Mobile build | EAS Build |
 | Maps | Google Maps Platform |
@@ -243,22 +284,22 @@ The sidebar is white with a light border. The active item uses `primarySoft` wit
 Use a simple npm-workspaces monorepo. Do not split the repository by member.
 
 ```text
-disaster-coordination-system/
+LankaShield/
 ├── apps/
 │   ├── mobile/
-│   │   ├── app/
-│   │   │   ├── _layout.tsx
-│   │   │   ├── index.tsx
-│   │   │   ├── (auth)/
-│   │   │   │   ├── login.tsx
-│   │   │   │   └── register.tsx
-│   │   │   └── (tabs)/
-│   │   │       ├── home.tsx
-│   │   │       ├── report.tsx
-│   │   │       ├── reports.tsx
-│   │   │       ├── notifications.tsx
-│   │   │       └── profile.tsx
 │   │   ├── src/
+│   │   │   ├── app/                      # Expo Router routes only (D8)
+│   │   │   │   ├── _layout.tsx
+│   │   │   │   ├── index.tsx
+│   │   │   │   ├── (auth)/
+│   │   │   │   │   ├── login.tsx
+│   │   │   │   │   └── register.tsx
+│   │   │   │   └── (tabs)/
+│   │   │   │       ├── home.tsx
+│   │   │   │       ├── report.tsx
+│   │   │   │       ├── reports.tsx
+│   │   │   │       ├── notifications.tsx
+│   │   │   │       └── profile.tsx
 │   │   │   ├── components/
 │   │   │   ├── features/
 │   │   │   │   ├── auth/
@@ -277,7 +318,8 @@ disaster-coordination-system/
 │   │   │   ├── store/
 │   │   │   ├── theme/
 │   │   │   └── utils/
-│   │   ├── app.config.ts
+│   │   ├── app.config.ts                 # replaces app.json (D9)
+│   │   ├── .env.example
 │   │   └── package.json
 │   │
 │   └── dashboard/
@@ -303,34 +345,33 @@ disaster-coordination-system/
 │       │   ├── store/
 │       │   ├── theme/
 │       │   └── utils/
+│       ├── .env.example
 │       ├── package.json
 │       └── vercel.json
 │
 ├── packages/
-│   └── shared/
+│   └── shared/                           # @lankashield/shared — TypeScript source, no build step
 │       ├── src/
-│       │   ├── models/
-│       │   ├── schemas/
-│       │   ├── constants/
 │       │   ├── enums/
+│       │   ├── models/
+│       │   ├── constants/
+│       │   ├── schemas/                  # Zod schemas (Phase 3)
+│       │   ├── rules/                    # pure business rules + unit tests (D13)
 │       │   └── index.ts
 │       └── package.json
 │
 ├── scripts/
-│   ├── seed-emulator.ts
-│   └── seed-production.ts
+│   └── seed.ts                           # demo data for the real Firebase project (D4)
 ├── docs/
 │   ├── demo-script.md
-│   └── test-evidence.md
-├── firebase.json
-├── firestore.indexes.json
-├── firestore.rules
-├── storage.rules
-├── .firebaserc
-├── .env.example
-├── package.json
+│   └── test-evidence.md                  # manual end-to-end checklist + screenshots (D5)
+├── .gitignore
+├── .prettierrc.json
+├── package.json                          # npm workspaces root, single package-lock.json
 └── README.md
 ```
+
+Each app keeps its own `.env.example` because Expo and Vite read `.env` from the app folder. There are no Firebase CLI files in the repository (D1).
 
 ### 6.1 Feature folder convention
 
@@ -422,7 +463,14 @@ Define and reuse:
 - `ReportMetric`
 - `NotificationRecord`
 
-Store Firestore timestamps as Firebase timestamps in the database and map them to ISO strings or JavaScript `Date` objects at the application boundary.
+Store Firestore timestamps as Firebase timestamps in the database and map them to ISO strings at the application boundary (D11).
+
+### 7.3 Implementation conventions
+
+- Enums are `as const` arrays with a derived union type, for example `HAZARD_TYPES` and `HazardType` (D12).
+- `MOBILE_ROLES` (`CITIZEN`, `VOLUNTEER`) and `DASHBOARD_ROLES` (`DUTY_OFFICER`, `DISTRICT_OFFICER`, `DMC_ANALYST`) drive role routing in each app.
+- Shared constants hold the colour tokens, status labels and colours (§5.3), error codes with messages (§10.6), collection names, storage paths, evidence limits and the shelter threshold.
+- A list of the 25 Sri Lankan districts is kept in shared constants for every district dropdown.
 
 ---
 
@@ -467,6 +515,13 @@ Keep the data model understandable and aligned with the revised class diagram.
   evidenceUrls: string[],
   status: HazardReportStatus,
   district: string,
+  disasterEventId?: string,          // set by the Duty Officer during verification (D6)
+  latestDecision?: {                 // copy of the verification decision for mobile (D7)
+    decisionId: string,
+    outcome: VerificationOutcome,
+    remarks: string,
+    decidedAt: Timestamp
+  },
   createdAt: Timestamp,
   updatedAt: Timestamp,
   clientCreatedAt: string,
@@ -483,6 +538,7 @@ Keep the data model understandable and aligned with the revised class diagram.
   officerId: string,
   outcome: VerificationOutcome,
   remarks: string,
+  disasterEventId?: string,
   decidedAt: Timestamp,
   notificationStatus: 'PENDING' | 'SENT' | 'FAILED'
 }
@@ -568,13 +624,26 @@ Keep the data model understandable and aligned with the revised class diagram.
   },
   missingMetrics: string[],
   generatedAt: Timestamp,
-  exportedUrl?: string
+  exportedUrl?: string,
+  shares?: { organisation: string, sharedBy: string, sharedAt: Timestamp }[]  // mocked donor share
 }
 ```
 
 #### `notifications/{notificationId}`
 
-Store notification title, body, recipient user, type, related entity ID, read state and delivery state.
+```ts
+{
+  notificationId: string,
+  recipientId: string,
+  type: 'VERIFICATION_RESULT' | 'WARNING' | 'SYSTEM',
+  title: string,
+  body: string,
+  relatedEntityId?: string,          // e.g. the hazard reportId
+  read: boolean,
+  deliveryStatus: 'PENDING' | 'SENT' | 'FAILED',
+  createdAt: Timestamp
+}
+```
 
 ### 8.2 Storage paths
 
@@ -586,10 +655,13 @@ generated-reports/{responseReportId}/report.pdf
 
 ### 8.3 Required indexes
 
-Add composite indexes only when Firestore reports that a query requires one. Expected queries include:
+Add composite indexes only when Firestore reports that a query requires one. The error message contains a link that creates the index in the console (D1). Expected queries include:
 
 - Hazard reports by `status` and `createdAt`.
 - Hazard reports by `district`, `status` and `createdAt`.
+- Hazard reports by `reporterId` and `createdAt` (mobile My Reports).
+- Hazard reports by `disasterEventId` (analytics).
+- Notifications by `recipientId`, `read` and `createdAt`.
 - Shelters by `district` and `status`.
 - Disaster events by `status` and `startedAt`.
 - Response reports by `eventId` and `generatedAt`.
@@ -603,9 +675,10 @@ Add composite indexes only when Firestore reports that a query requires one. Exp
 - Authentication: Email/Password.
 - Cloud Firestore.
 - Cloud Storage.
-- Local Emulator Suite.
 
-Cloud Functions are not required for the initial system. The Blaze plan may remain enabled for Google Maps billing and as an option for later improvements.
+**Billing (D3):** Switch the project to the Blaze plan before enabling Storage. New default Storage buckets require Blaze, and Google Maps requires a billing account. Create a Google Cloud budget alert (for example USD 1) straight away. Campus-scale usage stays within the no-cost allowances. Choose a Storage location in `US-CENTRAL1`, `US-EAST1` or `US-WEST1` to stay in the Cloud Storage always-free tier.
+
+Cloud Functions are not required.
 
 ### 9.2 Google Cloud APIs to enable
 
@@ -633,7 +706,6 @@ EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=
 EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
 EXPO_PUBLIC_FIREBASE_APP_ID=
 EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_KEY=
-EXPO_PUBLIC_USE_FIREBASE_EMULATORS=false
 ```
 
 #### Dashboard
@@ -646,14 +718,18 @@ VITE_FIREBASE_STORAGE_BUCKET=
 VITE_FIREBASE_MESSAGING_SENDER_ID=
 VITE_FIREBASE_APP_ID=
 VITE_GOOGLE_MAPS_WEB_KEY=
-VITE_USE_FIREBASE_EMULATORS=false
 ```
 
-Commit `.env.example`, not the real `.env` files. Never commit a Firebase service-account JSON file.
+Both apps use the same Firebase **Web app** config values; only the prefix differs. Copy each `.env.example` to `.env` in the same folder. Commit `.env.example`, not the real `.env` files (`.gitignore` already excludes them). Never commit a Firebase service-account JSON file.
+
+The seed script reads the dashboard `.env` plus `SEED_DEMO_PASSWORD`, which is set only on the machine that runs the seed.
 
 ### 9.4 Minimal security scope
 
-Do not spend excessive time building enterprise rules. Avoid the fully open test rule on an internet-accessible deployment because it allows unauthenticated users to change all data. Use one simple rule: any signed-in demonstration user can read and write application data.
+Do not spend excessive time building enterprise rules. Rules are pasted into the **Firebase console** (Firestore → Rules, Storage → Rules), not kept in the repository (D1).
+
+- **Until Phase 4 (auth) is done:** console *test mode* is acceptable. Test mode rules expire after 30 days, and after that every read and write fails.
+- **From Phase 4 onward:** replace test mode with the rules below so only signed-in demonstration users can read and write. Do this before the Vercel deployment is public.
 
 #### Firestore rules
 
@@ -713,11 +789,13 @@ The first implementation uses no Cloud Functions. Mobile and web applications ca
 When an officer submits a verification decision:
 
 1. Read the selected report and confirm it is still `PENDING_VERIFICATION`.
-2. Create a `verificationDecisions` document.
-3. Update the hazard report status.
+2. Create a `verificationDecisions` document, including the optional `disasterEventId` the officer selected (D6).
+3. Update the hazard report: `status`, `disasterEventId`, `latestDecision` (D7) and `updatedAt`.
 4. If escalated, create a `warningRequests` document.
 5. Create a `notifications` document for the reporter.
 6. Commit all writes in one Firestore batch.
+
+The decision form shows an optional **Disaster event** dropdown listing `ACTIVE` events in the report's district, plus recently completed ones.
 
 Disable the decision button immediately after submission and re-read the report after the batch completes. The simplified rules do not prevent another authenticated user from writing directly, so the UI and test data must follow the defined workflow.
 
@@ -735,7 +813,7 @@ Use `runTransaction` from the web dashboard:
 ### 10.4 Analytics and export
 
 - Query reports, decisions, shelters, allocations and events from Firestore.
-- Calculate metrics in TypeScript utility functions.
+- Calculate metrics with the pure functions in `packages/shared/src/rules/` (D13).
 - Store generated report metadata in `responseReports`.
 - Generate the PDF in the web browser using jsPDF.
 - Keep the generated analytics state if PDF export fails so the user can retry.
@@ -794,7 +872,7 @@ Map every code to a clear user message and recovery action.
 | Officer login | Email/password and validation |
 | Overview | KPI cards, recent reports, shelter summary and event summary |
 | Verification queue | Search, status/severity filters, table and pagination |
-| Report review | Evidence, Google Map, reporter data, duplicate indicator and decision form |
+| Report review | Evidence, Google Map, reporter data, duplicate indicator and decision form with optional disaster-event selection |
 | Shelter list | Capacity, occupancy, available places, status and actions |
 | Register/edit shelter | Details, capacity, location and duplicate-name warning |
 | Shelter allocation | Requested count, capacity result, alternative shelter and confirmation |
@@ -823,7 +901,7 @@ UC-specific states must include Pending Sync, Pending Verification, Rejected, Es
 
 Follow this sequence. Do not build all screens first and connect data later.
 
-### Phase 0 — Freeze the implementation contract
+### Phase 0 — Freeze the implementation contract ✅
 
 **Tasks**
 
@@ -834,7 +912,7 @@ Follow this sequence. Do not build all screens first and connect data later.
 
 **Exit condition:** The repository uses one agreed set of names, states and field definitions.
 
-### Phase 1 — Create the repository and applications
+### Phase 1 — Create the repository and applications ✅
 
 **Tasks**
 
@@ -844,59 +922,56 @@ Follow this sequence. Do not build all screens first and connect data later.
 4. Create the shared package.
 5. Add ESLint, Prettier and root scripts.
 6. Add `.env.example` and `.gitignore`.
-
-**Suggested commands**
-
-```bash
-npx create-expo-app@latest apps/mobile
-npm create vite@latest apps/dashboard -- --template react-ts
-firebase init firestore storage emulators
-```
+7. Install the Firebase JS SDK in both apps and add `src/services/firebase.ts`, which exports `db` and `storage` from `.env` values.
 
 **Exit condition:** Mobile and web applications start locally and build without errors.
 
-### Phase 2 — Configure Firebase, GCP and emulators
+### Phase 2 — Configure the Firebase project
 
 **Tasks**
 
-- Create the Firebase project. Enable Blaze if needed for Google Maps billing or later optional services.
-- Register one web application for the dashboard and Firebase JS SDK.
-- Configure the Expo project.
-- Enable Authentication, Firestore and Storage.
-- Enable Maps SDK for Android and Maps JavaScript API.
-- Add restricted API keys.
-- Configure Firestore, Auth and Storage emulators.
-- Add a `USE_FIREBASE_EMULATORS` environment switch.
+- Create the Firebase project and switch it to Blaze with a budget alert (D3).
+- Register one **Web app** and copy its config into both `.env` files (D2).
+- Enable Authentication (Email/Password), Firestore and Storage. Use console test-mode rules for now (§9.4).
+- Enable Maps SDK for Android and Maps JavaScript API, and create the two restricted keys (§9.2). This can wait until Phase 5 if needed.
+- Add a temporary connection check that reads one test document from both apps, then remove it.
 
-**Exit condition:** A test user can be created and one test Firestore document can be read from both front ends.
+**Exit condition:** One test Firestore document can be read from both front ends.
 
-### Phase 3 — Implement shared types, schemas and seed data
+### Phase 3 — Implement shared schemas, rules and seed data
 
 **Tasks**
 
-- Implement all enums and interfaces.
+- Enums, interfaces and constants are already in place (Phase 0). Add the Sri Lankan district list.
 - Create Zod schemas for hazard report, verification decision, shelter and report filters.
-- Create Firestore converters/mappers.
-- Create sample users for each role.
-- Create sample disaster events, shelters and hazard reports.
-- Add a repeatable seed script.
+- Add pure business rules in `packages/shared/src/rules/` with Vitest unit tests (D13):
+  - shelter capacity and status;
+  - allowed verification transitions and required rejection remarks;
+  - metric completeness and the provisional/final decision.
+- Create Firestore ↔ model mappers (Timestamp ↔ ISO string) in each app.
+- Write `scripts/seed.ts` (D4). It creates one demo user per role with `SEED_DEMO_PASSWORD`, plus events, shelters, reports, decisions, allocations and notifications (§15). It uses fixed document IDs, so running it again overwrites the documents instead of duplicating them.
 
-**Exit condition:** Seed data loads into the emulator without manual editing.
+**Exit condition:** `npm run seed` loads the demo data into a clean Firebase project without manual editing, and `npm test` passes for the shared rules.
 
 ### Phase 4 — Implement authentication and application shells
 
 **Mobile**
 
-- Login, registration and session restoration.
+- Login, registration and session restoration. Firebase Auth on React Native needs `initializeAuth` with AsyncStorage persistence so users stay signed in after the app restarts.
 - Expo Router protected route groups.
 - Citizen/Volunteer tab navigation.
-- Shared theme and feedback components.
+- Shared theme and feedback components (React Native Paper themed from the shared colour tokens, Inter font).
+- Create the first Android **development build** now (`npx eas-cli@latest build --profile development --platform android`). Google Maps in Phase 5 does not run in Expo Go.
 
 **Web**
 
 - Officer login and role-based protected routes.
 - Sidebar, header and responsive content layout.
 - Dashboard overview using seeded data.
+
+**Firebase console**
+
+- Replace test-mode rules with the signed-in-only rules from §9.4.
 
 **Exit condition:** Each role reaches only its intended application area.
 
@@ -963,6 +1038,7 @@ CREATE TABLE offline_reports (
 - Display the exact map location.
 - Show all report information.
 - Require remarks for rejection.
+- Optional disaster-event selection (D6).
 - Support:
   - Verify information.
   - Reject report.
@@ -971,7 +1047,7 @@ CREATE TABLE offline_reports (
 **Firebase writes**
 
 - Re-read the report and confirm its status is still `PENDING_VERIFICATION`.
-- Use one Firestore batch to write `VerificationDecision` and update report status.
+- Use one Firestore batch to write `VerificationDecision` and update the report's status, `disasterEventId` and `latestDecision` (D7).
 - Create `WarningRequest` in the same batch only for the escalated outcome.
 - Create an in-app notification document for the reporter in the same batch.
 - Disable further decisions after a successful commit.
@@ -1045,7 +1121,13 @@ CREATE TABLE offline_reports (
 
 ### Phase 11 — Testing and fault handling
 
-Add tests after each phase, then complete the cross-feature suite.
+Add tests after each phase, then complete the cross-feature suite. Automated tests never touch the real Firebase project. Firebase calls are mocked, and end-to-end flows are tested manually (D5).
+
+| Workspace | Runner |
+|---|---|
+| `packages/shared` | Vitest — business rules and Zod schemas |
+| `apps/dashboard` | Vitest + React Testing Library |
+| `apps/mobile` | Jest (`jest-expo`) + React Native Testing Library |
 
 #### Required unit tests
 
@@ -1066,10 +1148,12 @@ Add tests after each phase, then complete the cross-feature suite.
 - Shelter capacity warning.
 - Analytics empty state and incomplete-data banner.
 
-#### Required integration tests
+#### Manual end-to-end checklist
+
+Record these in `docs/test-evidence.md` with the steps, the expected result, the actual result and a screenshot:
 
 - Mobile report appears in verification queue.
-- Verification updates the mobile report status.
+- Verification updates the mobile report status and shows officer remarks.
 - Shelter allocation updates occupancy.
 - Analytics uses the updated records.
 
@@ -1089,8 +1173,8 @@ Aim for meaningful coverage of core business logic rather than artificially test
 
 **Mobile**
 
-- Create an Expo development build early enough to test Google Maps and the final Android configuration.
-- Produce the final Android APK using EAS Build.
+- The development build was created in Phase 4. Rebuild it whenever a native package is added.
+- Produce the final Android APK using EAS Build (a `preview` profile with `"buildType": "apk"`).
 - Test on at least one physical Android device.
 
 **Web**
@@ -1098,7 +1182,7 @@ Aim for meaningful coverage of core business logic rather than artificially test
 - Build with Vite.
 - Import the repository into Vercel and set `apps/dashboard` as the root directory.
 - Configure build command `npm run build` and output directory `dist`.
-- Add Firebase and Maps environment variables in Vercel.
+- Add Firebase and Maps environment variables in Vercel. Vercel installs from the root `package-lock.json`, so the shared workspace package resolves.
 - Add the Vercel domain to Firebase Authentication authorised domains.
 - Add a rewrite to `index.html` and verify direct React Router route refreshes.
 
@@ -1163,12 +1247,16 @@ on error:
 Use clear, reproducible calculations:
 
 ```text
-reportsReceived = reports linked to event/date/district filters
-verifiedReports = reports with VERIFIED or ESCALATED status
-shelterOccupancy = sum of currentOccupancy for selected shelters
-allocatedEvacuees = sum of confirmed allocations
-citizensReached = sum of successful mocked/real notification recipients
+eventReports      = hazard reports where disasterEventId == selected event (D6), then date/district filters
+reportsReceived   = count(eventReports)
+verifiedReports   = eventReports with VERIFIED or ESCALATED status
+shelterOccupancy  = sum of currentOccupancy for shelters in the event district
+allocatedEvacuees = sum of evacueeCount for CONFIRMED allocations with disasterEventId == selected event
+citizensReached   = count of SENT notifications whose relatedEntityId is one of eventReports
+unreviewedReports = PENDING_VERIFICATION reports in the event district between startedAt and endedAt (or now)
 ```
+
+If `unreviewedReports > 0`, the report counts are incomplete: `reportsReceived` and `verifiedReports` are listed in `missingMetrics` and the report stays `PROVISIONAL`. The analytics screen shows how many reports still need review.
 
 Every metric should include:
 
@@ -1179,29 +1267,36 @@ Every metric should include:
 
 If one metric is unavailable, show the available metrics and list the missing metric. Do not label the whole report final.
 
+```text
+status = FINAL        if event.status == COMPLETED and missingMetrics is empty
+         PROVISIONAL  otherwise
+```
+
 ---
 
 ## 15. Seed and demonstration data
 
-Create a deterministic seed set:
+Create a deterministic seed set with `npm run seed` (D4):
 
 - One user for every system role.
-- Two districts.
+- Two districts (for example Ratnapura and Kalutara, which are flood and landslide prone).
 - Two completed events and one active event.
 - At least 12 hazard reports across different severities and outcomes.
 - At least five shelters with Available, Nearly Full and Full examples.
 - At least six shelter allocations.
-- Verification decisions for several reports.
-- One incomplete metric example.
+- Verification decisions for several reports, with `disasterEventId` set on the reviewed reports.
+- One incomplete metric example: the active event has at least one unreviewed report.
 - Notification records with Sent, Pending and Failed states.
 
-Document demonstration credentials in a private submission note or lecturer-approved location, not in public source code.
+Document demonstration credentials in a private submission note or lecturer-approved location, not in public source code. Demo emails can be in the script; the password comes from `SEED_DEMO_PASSWORD`.
 
 ---
 
 ## 16. Git and code-quality workflow
 
 ### 16.1 Branch pattern
+
+Optional. Committing directly to `main` is acceptable for this project; use the pattern below if several members work at the same time.
 
 ```text
 main
@@ -1238,24 +1333,25 @@ docs(report): add implementation screenshots
 
 ## 17. Root scripts
 
-Add convenient scripts to the root `package.json`:
+Root `package.json` scripts (`seed` is added in Phase 3):
 
 ```json
 {
   "scripts": {
     "mobile": "npm --workspace apps/mobile run start",
     "dashboard": "npm --workspace apps/dashboard run dev",
-    "emulators": "firebase emulators:start --import=.firebase-data --export-on-exit=.firebase-data",
-    "seed": "tsx scripts/seed-emulator.ts",
+    "seed": "tsx --env-file=apps/dashboard/.env scripts/seed.ts",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present"
+    "build": "npm run build --workspaces --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   }
 }
 ```
 
-Adjust scripts to the actual package names created by the group.
+Run every `npm install` from the repository root so there is one `package-lock.json`. Use `npx expo install <pkg>` inside `apps/mobile` for Expo packages, and `npm install <pkg> -w apps/dashboard` for dashboard packages.
 
 ---
 
@@ -1334,7 +1430,8 @@ Adjust scripts to the actual package names created by the group.
 - [ ] Final APK generated.
 - [ ] Web dashboard deployed.
 - [ ] Repository README contains setup and demo instructions.
-- [ ] Seed script works on a clean environment.
+- [ ] Seed script works on a clean Firebase project.
+- [ ] Firebase console rules are the signed-in-only rules, not expired test mode.
 - [ ] Screenshots inserted into the Assignment 02 report.
 - [ ] Test evidence inserted into the report.
 - [ ] GitHub URL and final commit SHA added.
@@ -1367,7 +1464,8 @@ Once this works, extend it with offline synchronisation, verification outcomes, 
 - Expo SQLite: <https://docs.expo.dev/versions/latest/sdk/sqlite/>
 - Expo Notifications: <https://docs.expo.dev/versions/latest/sdk/notifications/>
 - Expo development builds: <https://docs.expo.dev/develop/development-builds/introduction/>
-- Firebase Local Emulator Suite: <https://firebase.google.com/docs/emulator-suite>
+- Expo monorepos: <https://docs.expo.dev/guides/monorepos/>
+- Cloud Storage for Firebase Blaze requirement: <https://firebase.google.com/docs/storage/faqs-storage-changes-announced-sept-2024>
 - Vite on Vercel: <https://vercel.com/docs/frameworks/frontend/vite>
 - Maps SDK for Android: <https://developers.google.com/maps/documentation/android-sdk/start>
 - Maps JavaScript API setup: <https://developers.google.com/maps/documentation/javascript/get-api-key>

@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+
+# environment — commit only the .env.example files
+.env
+.env.*
+!.env.example
+
+# never commit Firebase service-account credentials
+*service-account*.json
+*-firebase-adminsdk-*.json
+
+# build output
+dist/
+coverage/
+*.tsbuildinfo
+
+# logs
+*.log
+npm-debug.log*
+
+# editors / OS
+.idea/
+.DS_Store
+Thumbs.db
