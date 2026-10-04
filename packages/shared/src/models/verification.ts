@@ -6,6 +6,7 @@ import type {
   WarningRequestStatus,
 } from '../enums';
 import type { IsoDateString } from './common';
+import type { District } from '../constants/districts';
 
 /** `verificationDecisions/{decisionId}` — the auditable record of an officer decision. */
 export interface VerificationDecision {
@@ -26,7 +27,7 @@ export interface WarningRequest {
   requestedBy: string;
   hazardType: HazardType;
   severity: Severity;
-  affectedDistrict: string;
+  affectedDistrict: District;
   status: WarningRequestStatus;
   createdAt: IsoDateString;
 }
