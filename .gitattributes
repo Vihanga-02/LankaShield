@@ -1,0 +1,6 @@
+# Prettier writes LF; keep LF in the working copy on every OS so files don't show as modified.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary

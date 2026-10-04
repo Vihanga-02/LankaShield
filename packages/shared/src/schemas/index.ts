@@ -1,4 +1,5 @@
 export * from './common';
+export * from './auth.schema';
 export * from './hazardReport.schema';
 export * from './verification.schema';
 export * from './shelter.schema';

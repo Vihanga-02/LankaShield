@@ -18,8 +18,9 @@
 | Phase 1 — Create the repository and applications | ✅ Done — npm workspaces, shared package, lint/format, env templates |
 | Phase 2 — Configure the Firebase project | ✅ Done — both `.env` files verified; Firestore read/write and Storage upload/download/delete confirmed |
 | Phase 3 — Shared schemas, rules and seed data | ✅ Done — 50 unit tests pass; seed loaded (72 documents) and re-run without duplicates |
-| Phase 4 — Authentication and application shells | ⏳ Next |
-| Phases 5–12 | Not started |
+| Phase 4 — Authentication and application shells | ✅ Done — login/register/session restore, role routing in both apps, 57 unit tests pass |
+| Phase 5 — UC01 online report submission | ⏳ Next |
+| Phases 6–12 | Not started |
 
 ### 0.2 Decisions made during implementation
 
@@ -41,9 +42,14 @@ These decisions override anything later in this document that disagrees with the
 | D12 | **Shared enums are `as const` arrays with derived union types**, not TypeScript `enum`. | Usable in dropdowns and `z.enum()`, and compatible with the dashboard's `erasableSyntaxOnly` setting. |
 | D13 | **Pure business rules live in `packages/shared/src/rules/`** (capacity, shelter status, verification transitions, provisional/final decision, metric completeness). | Written and unit-tested once, used by both apps. |
 | D14 | **Android package ID is `lk.lankashield.mobile`** (fixed; do not change after the first build). | The Google Maps Android key restriction and EAS credentials depend on it. |
-| D15 | **The EAS project lives in the group's Expo organisation.** In Phase 4, set `owner: '<organisation-slug>'` in `app.config.ts`, then run `npx eas-cli@latest init` from `apps/mobile`. It cannot edit `app.config.ts` itself, so copy the `projectId` it prints into `extra.eas.projectId`. | Every group member can build under the shared organisation. |
+| D15 | **The EAS project lives in the group's Expo organisation.** When the development build is made (after Phase 9, D18), set `owner: '<organisation-slug>'` in `app.config.ts`, then run `npx eas-cli@latest init` from `apps/mobile`. It cannot edit `app.config.ts` itself, so copy the `projectId` it prints into `extra.eas.projectId`. | Every group member can build under the shared organisation. |
 | D16 | **Firestore converters live in `@lankashield/shared/firestore`**, not in each app. `converters.<collection>` turns ISO strings in timestamp fields into `Timestamp` on write, drops `undefined` fields, and turns every `Timestamp` back into an ISO string on read. The main `@lankashield/shared` entry stays free of Firebase. | One mapping used by mobile, the dashboard and the seed script. |
 | D17 | **Seed shelter occupancy comes from the active event's confirmed allocations.** Allocations for completed events are historical records. | Shelter numbers in the seed always match the allocation records. |
+| D18 | **Mobile development happens in Expo Go until Phase 9; the EAS development build is made after Phase 9.** Every mobile package used so far is in Expo Go: AsyncStorage, vector icons, and `react-native-maps`, which needs no setup in Expo Go. The own Android Maps key is only needed for the APK. | A development build takes time and isn't needed to build the features. |
+| D19 | **Mobile Home is `src/app/(tabs)/index.tsx`** (route `/`), not `home.tsx`. Routes are guarded with `Stack.Protected`: `(tabs)` when signed in, `(auth)` when signed out. | `/` must resolve to a screen for the protected-route redirect to work. |
+| D20 | **Dashboard page access by role** (`apps/dashboard/src/app/navigation.tsx`): Overview and Profile for every officer; Verification Queue and Notifications for the Duty Officer; Shelters for the District Officer; Disaster Analytics for the DMC Analyst. A citizen or volunteer account is signed out of the dashboard, and an officer account is signed out of mobile, each with a message. | Each role reaches only its intended application area (Phase 4 exit condition). |
+| D21 | **Mobile caches the signed-in profile in AsyncStorage.** A restored session still works when the app starts offline. | Needed for offline reporting in Phase 6. |
+| D22 | **Material UI v9** — style props like `fontWeight`, `textAlign`, `alignItems` and `flexWrap` go inside `sx`, not as component props. The Vite build splits Firebase and MUI into vendor chunks and loads pages on demand. | v9 removed system props from components. |
 
 ### 0.3 Installed versions
 
@@ -299,7 +305,7 @@ LankaShield/
 │   │   │   │   │   ├── login.tsx
 │   │   │   │   │   └── register.tsx
 │   │   │   │   └── (tabs)/
-│   │   │   │       ├── home.tsx
+│   │   │   │       ├── index.tsx         # Home (D19)
 │   │   │   │       ├── report.tsx
 │   │   │   │       ├── reports.tsx
 │   │   │   │       ├── notifications.tsx
@@ -966,7 +972,7 @@ Follow this sequence. Do not build all screens first and connect data later.
 - Expo Router protected route groups.
 - Citizen/Volunteer tab navigation.
 - Shared theme and feedback components (React Native Paper themed from the shared colour tokens, Inter font).
-- Create the first Android **development build** now (`npx eas-cli@latest build --profile development --platform android`). Google Maps in Phase 5 does not run in Expo Go.
+- ~~Create the first Android development build~~ — moved to after Phase 9 (D18). Development continues in Expo Go.
 
 **Web**
 
@@ -1178,7 +1184,7 @@ Aim for meaningful coverage of core business logic rather than artificially test
 
 **Mobile**
 
-- The development build was created in Phase 4. Rebuild it whenever a native package is added.
+- Create the Android development build after Phase 9 (D18, D15): set `owner` and `extra.eas.projectId`, add `EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_KEY` to `android.config.googleMaps.apiKey` in `app.config.ts`, then run `npx eas-cli@latest build --profile development --platform android`. Rebuild it whenever a native package is added.
 - Produce the final Android APK using EAS Build (a `preview` profile with `"buildType": "apk"`).
 - Test on at least one physical Android device.
 

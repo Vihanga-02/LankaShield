@@ -1,4 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getApp, getApps, initializeApp, type FirebaseOptions } from 'firebase/app';
+import { getAuth, getReactNativePersistence, initializeAuth, type Auth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
@@ -23,5 +25,17 @@ if (missing.length > 0) {
 }
 
 export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+
+// Persist the session in AsyncStorage so users stay signed in (also offline) after a restart.
+// initializeAuth throws if it already ran, e.g. after a Fast Refresh, so fall back to getAuth.
+function createAuth(): Auth {
+  try {
+    return initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
+  } catch {
+    return getAuth(app);
+  }
+}
+
+export const auth = createAuth();
 export const db = getFirestore(app);
 export const storage = getStorage(app);
