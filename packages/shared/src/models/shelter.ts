@@ -1,11 +1,12 @@
 import type { AllocationStatus, ShelterStatus } from '../enums';
 import type { GeoPoint, IsoDateString } from './common';
+import type { District } from '../constants/districts';
 
 /** `shelters/{shelterId}` */
 export interface EmergencyShelter {
   shelterId: string;
   name: string;
-  district: string;
+  district: District;
   address: string;
   location: GeoPoint;
   capacity: number;

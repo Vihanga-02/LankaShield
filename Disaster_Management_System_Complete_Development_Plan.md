@@ -17,8 +17,9 @@
 | Phase 0 — Freeze the implementation contract | ✅ Done — enums, models and constants in `packages/shared` |
 | Phase 1 — Create the repository and applications | ✅ Done — npm workspaces, shared package, lint/format, env templates |
 | Phase 2 — Configure the Firebase project | ✅ Done — both `.env` files verified; Firestore read/write and Storage upload/download/delete confirmed |
-| Phase 3 — Shared schemas, rules and seed data | ⏳ Next |
-| Phases 4–12 | Not started |
+| Phase 3 — Shared schemas, rules and seed data | ✅ Done — 50 unit tests pass; seed loaded (72 documents) and re-run without duplicates |
+| Phase 4 — Authentication and application shells | ⏳ Next |
+| Phases 5–12 | Not started |
 
 ### 0.2 Decisions made during implementation
 
@@ -41,6 +42,8 @@ These decisions override anything later in this document that disagrees with the
 | D13 | **Pure business rules live in `packages/shared/src/rules/`** (capacity, shelter status, verification transitions, provisional/final decision, metric completeness). | Written and unit-tested once, used by both apps. |
 | D14 | **Android package ID is `lk.lankashield.mobile`** (fixed; do not change after the first build). | The Google Maps Android key restriction and EAS credentials depend on it. |
 | D15 | **The EAS project lives in the group's Expo organisation.** In Phase 4, set `owner: '<organisation-slug>'` in `app.config.ts`, then run `npx eas-cli@latest init` from `apps/mobile`. It cannot edit `app.config.ts` itself, so copy the `projectId` it prints into `extra.eas.projectId`. | Every group member can build under the shared organisation. |
+| D16 | **Firestore converters live in `@lankashield/shared/firestore`**, not in each app. `converters.<collection>` turns ISO strings in timestamp fields into `Timestamp` on write, drops `undefined` fields, and turns every `Timestamp` back into an ISO string on read. The main `@lankashield/shared` entry stays free of Firebase. | One mapping used by mobile, the dashboard and the seed script. |
+| D17 | **Seed shelter occupancy comes from the active event's confirmed allocations.** Allocations for completed events are historical records. | Shelter numbers in the seed always match the allocation records. |
 
 ### 0.3 Installed versions
 
@@ -358,6 +361,7 @@ LankaShield/
 │       │   ├── constants/
 │       │   ├── schemas/                  # Zod schemas (Phase 3)
 │       │   ├── rules/                    # pure business rules + unit tests (D13)
+│       │   ├── firestore/                # converters, imported as @lankashield/shared/firestore (D16)
 │       │   └── index.ts
 │       └── package.json
 │
@@ -949,7 +953,7 @@ Follow this sequence. Do not build all screens first and connect data later.
   - shelter capacity and status;
   - allowed verification transitions and required rejection remarks;
   - metric completeness and the provisional/final decision.
-- Create Firestore ↔ model mappers (Timestamp ↔ ISO string) in each app.
+- Create Firestore ↔ model converters (Timestamp ↔ ISO string) in `@lankashield/shared/firestore` (D16).
 - Write `scripts/seed.ts` (D4). It creates one demo user per role with `SEED_DEMO_PASSWORD`, plus events, shelters, reports, decisions, allocations and notifications (§15). It uses fixed document IDs, so running it again overwrites the documents instead of duplicating them.
 
 **Exit condition:** `npm run seed` loads the demo data into a clean Firebase project without manual editing, and `npm test` passes for the shared rules.

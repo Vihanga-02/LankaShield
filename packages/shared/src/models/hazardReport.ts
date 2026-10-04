@@ -8,6 +8,7 @@ import type {
   VerificationOutcome,
 } from '../enums';
 import type { GeoPoint, IsoDateString } from './common';
+import type { District } from '../constants/districts';
 
 export interface GeoLocation extends GeoPoint {
   address?: string;
@@ -34,7 +35,7 @@ export interface HazardReport {
   location: GeoLocation;
   evidenceUrls: string[];
   status: HazardReportStatus;
-  district: string;
+  district: District;
   /** Set by the Duty Officer during verification; links the report to a disaster event for UC04. */
   disasterEventId?: string;
   latestDecision?: LatestDecisionSummary;

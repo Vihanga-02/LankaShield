@@ -8,7 +8,8 @@
   "scripts": {
     "mobile": "npm --workspace apps/mobile run start",
     "dashboard": "npm --workspace apps/dashboard run dev",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "seed": "tsx --env-file=apps/dashboard/.env scripts/seed.ts",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc -p scripts",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
@@ -16,7 +17,10 @@
     "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "@types/node": "^24.13.3",
     "@types/react": "~19.2.18",
-    "prettier": "^3.6.2"
+    "firebase": "^12.19.0",
+    "prettier": "^3.6.2",
+    "tsx": "^4.23.15"
   }
 }

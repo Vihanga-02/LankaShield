@@ -1,19 +1,20 @@
 import type { DisasterEventStatus, DisasterReportStatus, HazardType } from '../enums';
 import type { IsoDateString } from './common';
+import type { District } from '../constants/districts';
 
 /** `disasterEvents/{eventId}` */
 export interface DisasterEvent {
   eventId: string;
   name: string;
   hazardType: HazardType;
-  district: string;
+  district: District;
   status: DisasterEventStatus;
   startedAt: IsoDateString;
   endedAt?: IsoDateString;
 }
 
 export interface ReportFilters {
-  district?: string;
+  district?: District;
   from?: IsoDateString;
   to?: IsoDateString;
 }
