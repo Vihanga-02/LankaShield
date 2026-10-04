@@ -16,8 +16,9 @@
 |---|---|
 | Phase 0 — Freeze the implementation contract | ✅ Done — enums, models and constants in `packages/shared` |
 | Phase 1 — Create the repository and applications | ✅ Done — npm workspaces, shared package, lint/format, env templates |
-| Phase 2 — Configure the Firebase project | ⏳ Next — fill `.env` files, enable Blaze, Firestore and Storage |
-| Phases 3–12 | Not started |
+| Phase 2 — Configure the Firebase project | ✅ Done — both `.env` files verified; Firestore read/write and Storage upload/download/delete confirmed |
+| Phase 3 — Shared schemas, rules and seed data | ⏳ Next |
+| Phases 4–12 | Not started |
 
 ### 0.2 Decisions made during implementation
 
