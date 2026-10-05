@@ -11,7 +11,7 @@ import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
-import { Banner, Button, HelperText, SegmentedButtons, Text } from 'react-native-paper';
+import { Banner, Button, HelperText, SegmentedButtons, Text, TextInput } from 'react-native-paper';
 
 import { FormTextField } from '@/components/FormTextField';
 import { ScreenContainer } from '@/components/ScreenContainer';
@@ -20,6 +20,8 @@ import { AuthHeader } from '@/features/auth/components/AuthHeader';
 
 export default function RegisterScreen() {
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const { control, handleSubmit, formState } = useForm<RegisterInput>({
     resolver: zodResolver(registerInputSchema),
@@ -102,15 +104,31 @@ export default function RegisterScreen() {
           control={control}
           name="password"
           label="Password"
-          secureTextEntry
+          secureTextEntry={!showPassword}
           autoComplete="new-password"
+          right={
+            <TextInput.Icon
+              icon={showPassword ? 'eye-off' : 'eye'}
+              onPress={() => setShowPassword((value) => !value)}
+              accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+            />
+          }
         />
         <FormTextField
           control={control}
           name="confirmPassword"
           label="Confirm password"
-          secureTextEntry
+          secureTextEntry={!showConfirmPassword}
           autoComplete="new-password"
+          right={
+            <TextInput.Icon
+              icon={showConfirmPassword ? 'eye-off' : 'eye'}
+              onPress={() => setShowConfirmPassword((value) => !value)}
+              accessibilityLabel={
+                showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'
+              }
+            />
+          }
         />
 
         <Button
