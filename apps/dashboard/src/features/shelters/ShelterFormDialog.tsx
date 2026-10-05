@@ -1,9 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   DISTRICTS,
+  districtMapCenter,
   findDuplicateShelterName,
+  isWithinSriLanka,
   shelterInputSchema,
   toErrorMessage,
+  type District,
   type EmergencyShelter,
   type ShelterInput,
 } from '@lankashield/shared';
@@ -45,14 +48,16 @@ export function ShelterFormDialog({
   const [closed, setClosed] = useState(shelter?.status === 'CLOSED');
   const [error, setError] = useState<string | null>(null);
 
-  const { control, handleSubmit, formState } = useForm<ShelterInput>({
+  const { control, handleSubmit, formState, setValue } = useForm<ShelterInput>({
     resolver: zodResolver(shelterInputSchema),
     defaultValues: shelter
       ? {
           name: shelter.name,
           district: shelter.district,
           address: shelter.address,
-          location: shelter.location,
+          location: isWithinSriLanka(shelter.location)
+            ? shelter.location
+            : districtMapCenter(shelter.district),
           capacity: shelter.capacity,
           currentOccupancy: shelter.currentOccupancy,
           contactName: shelter.contactName ?? '',
@@ -118,7 +123,16 @@ export function ShelterFormDialog({
                   select
                   label="District"
                   value={field.value ?? ''}
-                  onChange={field.onChange}
+                  onChange={(e) => {
+                    const nextDistrict = e.target.value as District;
+                    field.onChange(nextDistrict);
+                    if (nextDistrict !== district) {
+                      setValue('location', districtMapCenter(nextDistrict), {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                    }
+                  }}
                   error={!!fieldState.error}
                   helperText={fieldState.error?.message}
                   disabled={busy}>
@@ -171,8 +185,6 @@ export function ShelterFormDialog({
                   label="Current occupancy"
                   type="number"
                   value={field.value ?? ''}
-                  // React Hook Form does not support `undefined` as a controlled field value.
-                  // Keep an empty input as null so the user can clear the initial 0 before typing.
                   onChange={(e) =>
                     field.onChange(e.target.value === '' ? null : Number(e.target.value))
                   }
@@ -222,9 +234,16 @@ export function ShelterFormDialog({
                   Location
                 </Typography>
                 <Typography variant="body2" color="textSecondary" gutterBottom>
-                  Click the map to place the shelter, or enter the coordinates.
+                  Select the district first. Its centre is used as a starting point; then click or
+                  drag the marker to the shelter's exact location.
                 </Typography>
-                <PointMap point={field.value} onPick={field.onChange} height={260} zoom={13} />
+                <PointMap
+                  point={field.value}
+                  onPick={field.onChange}
+                  focusPoint={district ? districtMapCenter(district) : undefined}
+                  height={260}
+                  zoom={13}
+                />
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1.5 }}>
                   <TextField
                     size="small"
