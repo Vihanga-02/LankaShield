@@ -9,7 +9,7 @@ export function LoadingState({ message = 'Loading…' }: { message?: string }) {
       aria-label={message}
       sx={{ py: 6, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
       <CircularProgress size={32} />
-      <Typography color="text.secondary">{message}</Typography>
+      <Typography color="textSecondary">{message}</Typography>
     </Box>
   );
 }

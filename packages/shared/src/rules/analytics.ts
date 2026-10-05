@@ -26,7 +26,8 @@ export const METRIC_LABELS: Record<MetricKey, string> = {
   reportsReceived: 'Hazard reports received',
   verifiedReports: 'Verified reports',
   citizensReached: 'Citizens reached',
-  shelterOccupancy: 'Shelter occupancy',
+  // Shelters keep no occupancy history, so this is today's figure for the event district.
+  shelterOccupancy: 'Current shelter occupancy',
   allocatedEvacuees: 'Evacuees allocated',
 };
 

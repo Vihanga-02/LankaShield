@@ -15,7 +15,7 @@ export function FullPageLoader({ message }: { message: string }) {
         textAlign: 'center',
       }}>
       <CircularProgress sx={{ mx: 'auto' }} />
-      <Typography color="text.secondary">{message}</Typography>
+      <Typography color="textSecondary">{message}</Typography>
     </Box>
   );
 }

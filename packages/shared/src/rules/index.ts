@@ -5,3 +5,5 @@ export * from './roles';
 export * from './reportId';
 export * from './location';
 export * from './offlineSync';
+export * from './duplicates';
+export * from './analyticsCharts';
