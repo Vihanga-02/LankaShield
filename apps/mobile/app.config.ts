@@ -32,6 +32,20 @@ const config: ExpoConfig = {
         imageWidth: 76,
       },
     ],
+    [
+      'expo-location',
+      {
+        locationWhenInUsePermission:
+          'LankaShield uses your location to attach the hazard position to your report.',
+      },
+    ],
+    [
+      'expo-image-picker',
+      {
+        photosPermission: 'LankaShield lets you attach photos of the hazard as evidence.',
+        cameraPermission: 'LankaShield lets you take photos of the hazard as evidence.',
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

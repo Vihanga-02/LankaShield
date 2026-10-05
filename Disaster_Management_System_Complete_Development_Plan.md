@@ -19,8 +19,9 @@
 | Phase 2 — Configure the Firebase project | ✅ Done — both `.env` files verified; Firestore read/write and Storage upload/download/delete confirmed |
 | Phase 3 — Shared schemas, rules and seed data | ✅ Done — 50 unit tests pass; seed loaded (72 documents) and re-run without duplicates |
 | Phase 4 — Authentication and application shells | ✅ Done — login/register/session restore, role routing in both apps, 57 unit tests pass |
-| Phase 5 — UC01 online report submission | ⏳ Next |
-| Phases 6–12 | Not started |
+| Phase 5 — UC01 online report submission | ✅ Done — form, GPS/map location, evidence upload, My Reports, details, live dashboard queue; 64 unit tests pass |
+| Phase 6 — Offline queue and synchronisation | ⏳ Next |
+| Phases 7–12 | Not started |
 
 ### 0.2 Decisions made during implementation
 
@@ -50,6 +51,11 @@ These decisions override anything later in this document that disagrees with the
 | D20 | **Dashboard page access by role** (`apps/dashboard/src/app/navigation.tsx`): Overview and Profile for every officer; Verification Queue and Notifications for the Duty Officer; Shelters for the District Officer; Disaster Analytics for the DMC Analyst. A citizen or volunteer account is signed out of the dashboard, and an officer account is signed out of mobile, each with a message. | Each role reaches only its intended application area (Phase 4 exit condition). |
 | D21 | **Mobile caches the signed-in profile in AsyncStorage.** A restored session still works when the app starts offline. | Needed for offline reporting in Phase 6. |
 | D22 | **Material UI v9** — style props like `fontWeight`, `textAlign`, `alignItems` and `flexWrap` go inside `sx`, not as component props. The Vite build splits Firebase and MUI into vendor chunks and loads pages on demand. | v9 removed system props from components. |
+| D23 | **Tracking ID format `LS-YYYYMMDD-XXXXXX`** (`generateReportId`, 6 characters from an alphabet without I/L/O/U). It is the Firestore document ID, created once per draft and kept through every retry. Evidence files are positional (`ev-1..3`), so a re-upload overwrites rather than duplicates. | Readable over the phone and idempotent on retry. |
+| D24 | **Submission is idempotent.** Before writing, the service reads `hazardReports/{reportId}` and stops if it already exists. Every network step has a timeout, because Firestore writes never reject on their own when the connection drops. `createdAt` and `updatedAt` are `serverTimestamp()`, and `clientCreatedAt` is the device time. | Retry after a lost confirmation can't duplicate or overwrite a report; the same logic is reused by the Phase 6 sync. |
+| D25 | **Lists are sorted on the client** (My Reports by `reporterId`, the queue by `status`), so no composite index is needed yet. | Campus-scale data; avoids index setup until Phase 7 filtering needs it. |
+| D26 | **The district is suggested from reverse geocoding** (`matchDistrict`), and a location outside Sri Lanka shows a warning without blocking the report. Until Phase 6, submitting offline shows a "you're offline" error and keeps the form. | Fewer manual steps; emulators default to a location in the USA. |
+| D27 | **The dashboard Verification Queue is a live list in Phase 5** (onSnapshot on `PENDING_VERIFICATION`). Filters and the review/decision screen are added in Phase 7. | Phase 5 exit condition: a mobile report appears in the queue immediately. |
 
 ### 0.3 Installed versions
 

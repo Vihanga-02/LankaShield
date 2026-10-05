@@ -6,6 +6,7 @@ import {
   Inter_700Bold,
   useFonts,
 } from '@expo-google-fonts/inter';
+import { colors } from '@lankashield/shared';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -15,7 +16,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { subscribeToAuth } from '@/features/auth/auth.service';
 import { useAuthStore } from '@/store/authStore';
-import { paperTheme } from '@/theme/paperTheme';
+import { INTER_FONTS, paperTheme } from '@/theme/paperTheme';
 
 // Keep the native splash screen up while fonts load and the saved session is restored.
 SplashScreen.preventAutoHideAsync();
@@ -50,6 +51,17 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Protected guard={signedIn}>
             <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="report-submitted" options={{ gestureEnabled: false }} />
+            <Stack.Screen
+              name="report-details/[id]"
+              options={{
+                headerShown: true,
+                title: 'Report details',
+                headerTintColor: colors.primary,
+                headerTitleStyle: { fontFamily: INTER_FONTS.semiBold, color: colors.textPrimary },
+                headerStyle: { backgroundColor: colors.surface },
+              }}
+            />
           </Stack.Protected>
           <Stack.Protected guard={!signedIn}>
             <Stack.Screen name="(auth)" />
