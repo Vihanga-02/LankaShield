@@ -54,7 +54,7 @@ function KpiCard({ label, value, icon }: { label: string; value: string; icon: R
         </Box>
         <Box>
           <Typography variant="h5">{value}</Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {label}
           </Typography>
         </Box>
@@ -132,7 +132,7 @@ function OverviewContent({ data }: { data: OverviewData }) {
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
                           {r.title}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" color="textSecondary">
                           {r.reportId}
                         </Typography>
                       </TableCell>
@@ -169,7 +169,7 @@ function OverviewContent({ data }: { data: OverviewData }) {
                 ))}
               </Stack>
               <Box>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
                   Occupancy of open shelters: {formatNumber(shelters.occupancy)} /{' '}
                   {formatNumber(shelters.capacity)} ({occupancyRate.toFixed(0)}%)
                 </Typography>
@@ -194,7 +194,7 @@ function OverviewContent({ data }: { data: OverviewData }) {
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     {e.name}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="textSecondary">
                     {HAZARD_TYPE_LABELS[e.hazardType]} · {e.district} · since{' '}
                     {formatDate(e.startedAt)}
                   </Typography>
@@ -202,13 +202,13 @@ function OverviewContent({ data }: { data: OverviewData }) {
               ))}
             </Stack>
           )}
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+          <Typography variant="body2" color="textSecondary" sx={{ mt: 2 }}>
             {data.completedEvents} completed event{data.completedEvents === 1 ? '' : 's'}
           </Typography>
         </SectionCard>
       </Stack>
 
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         Last updated {formatDateTime(data.loadedAt)}
       </Typography>
     </Stack>

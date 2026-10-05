@@ -15,7 +15,7 @@ import { useAuthStore } from '../store/authStore';
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <Stack direction="row" spacing={2} sx={{ py: 1.5 }}>
-      <Typography color="text.secondary" sx={{ width: 120, flexShrink: 0 }}>
+      <Typography color="textSecondary" sx={{ width: 120, flexShrink: 0 }}>
         {label}
       </Typography>
       <Typography>{value}</Typography>

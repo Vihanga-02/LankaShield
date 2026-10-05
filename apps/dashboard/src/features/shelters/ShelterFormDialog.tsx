@@ -217,7 +217,7 @@ export function ShelterFormDialog({
                 <Typography variant="subtitle2" gutterBottom>
                   Location
                 </Typography>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
                   Click the map to place the shelter, or enter the coordinates.
                 </Typography>
                 <PointMap point={field.value} onPick={field.onChange} height={260} zoom={13} />

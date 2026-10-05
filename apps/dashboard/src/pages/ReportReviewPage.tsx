@@ -53,7 +53,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
     <Stack direction="row" spacing={2} sx={{ py: 0.75 }}>
-      <Typography color="text.secondary" sx={{ width: 140, flexShrink: 0 }}>
+      <Typography color="textSecondary" sx={{ width: 140, flexShrink: 0 }}>
         {label}
       </Typography>
       <Box sx={{ minWidth: 0 }}>{value}</Box>
@@ -90,7 +90,7 @@ function ContextPanels({ report }: { report: HazardReport }) {
             />
           </>
         ) : (
-          <Typography color="text.secondary">This report has already been reviewed.</Typography>
+          <Typography color="textSecondary">This report has already been reviewed.</Typography>
         )}
       </Section>
 
@@ -103,13 +103,13 @@ function ContextPanels({ report }: { report: HazardReport }) {
             <Row label="Phone" value={reporter.phone ?? 'Not provided'} />
           </>
         ) : (
-          <Typography color="text.secondary">Reporter profile not found.</Typography>
+          <Typography color="textSecondary">Reporter profile not found.</Typography>
         )}
       </Section>
 
       <Section title={`Possible duplicates (${duplicates.length})`}>
         {duplicates.length === 0 ? (
-          <Typography color="text.secondary">
+          <Typography color="textSecondary">
             No other {HAZARD_TYPE_LABELS[report.hazardType].toLowerCase()} reports within 1 km and
             24 hours.
           </Typography>
@@ -120,7 +120,7 @@ function ContextPanels({ report }: { report: HazardReport }) {
                 <Link component={RouterLink} to={`/verification/${d.report.reportId}`}>
                   {d.report.title}
                 </Link>
-                <Typography variant="caption" color="text.secondary" component="div">
+                <Typography variant="caption" color="textSecondary" component="div">
                   {d.report.reportId} · {(d.distanceKm * 1000).toFixed(0)} m away ·{' '}
                   {d.hoursApart.toFixed(1)} h apart ·{' '}
                   {HAZARD_REPORT_STATUS_PRESENTATION[d.report.status].label}
@@ -151,7 +151,7 @@ function ReviewContent({ report }: { report: HazardReport }) {
             {report.title}
           </Typography>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mt: 0.5 }}>
-            <Typography color="text.secondary">{report.reportId}</Typography>
+            <Typography color="textSecondary">{report.reportId}</Typography>
             <Button
               size="small"
               startIcon={<ContentCopyOutlined fontSize="small" />}
@@ -185,7 +185,7 @@ function ReviewContent({ report }: { report: HazardReport }) {
 
           <Section title={`Evidence (${report.evidenceUrls.length})`}>
             {report.evidenceUrls.length === 0 ? (
-              <Typography color="text.secondary">No photos were attached.</Typography>
+              <Typography color="textSecondary">No photos were attached.</Typography>
             ) : (
               <Box
                 sx={{
@@ -223,7 +223,7 @@ function ReviewContent({ report }: { report: HazardReport }) {
 
           <Section title="Location">
             <PointMap point={report.location} height={300} />
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
               {report.location.address ?? 'No address'} · {report.location.latitude.toFixed(5)},{' '}
               {report.location.longitude.toFixed(5)} ·{' '}
               {report.location.source === 'GPS' ? 'GPS' : 'Selected on map'}

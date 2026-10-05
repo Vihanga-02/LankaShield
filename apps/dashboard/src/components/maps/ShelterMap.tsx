@@ -77,7 +77,7 @@ export function ShelterMap({
             onCloseClick={() => setSelectedId(null)}>
             <Box sx={{ minWidth: 200 }}>
               <Typography variant="subtitle2">{selected.name}</Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {SHELTER_STATUS_PRESENTATION[selected.status].label} · {selected.currentOccupancy}/
                 {selected.capacity} occupied · {selected.availableCapacity} available
               </Typography>

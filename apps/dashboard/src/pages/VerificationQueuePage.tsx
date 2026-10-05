@@ -106,7 +106,7 @@ function QueueTable({ reports }: { reports: HazardReport[] }) {
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
                   {r.title}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color="textSecondary">
                   {r.reportId}
                 </Typography>
               </TableCell>
@@ -121,7 +121,7 @@ function QueueTable({ reports }: { reports: HazardReport[] }) {
               </TableCell>
               <TableCell>
                 <Typography variant="body2">{r.district}</Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color="textSecondary">
                   {r.location.address ??
                     `${r.location.latitude.toFixed(4)}, ${r.location.longitude.toFixed(4)}`}
                 </Typography>

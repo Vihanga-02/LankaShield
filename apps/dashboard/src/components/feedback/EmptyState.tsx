@@ -24,7 +24,7 @@ export function EmptyState({ icon, title, message, action }: EmptyStateProps) {
         '& svg': { fontSize: 40 },
       }}>
       {icon}
-      <Typography variant="subtitle1" color="text.primary">
+      <Typography variant="subtitle1" color="textPrimary">
         {title}
       </Typography>
       {message ? <Typography variant="body2">{message}</Typography> : null}

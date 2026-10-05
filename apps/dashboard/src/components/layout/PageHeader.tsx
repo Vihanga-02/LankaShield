@@ -25,7 +25,7 @@ export function PageHeader({
         <Typography variant="h5" component="h1">
           {title}
         </Typography>
-        {subtitle ? <Typography color="text.secondary">{subtitle}</Typography> : null}
+        {subtitle ? <Typography color="textSecondary">{subtitle}</Typography> : null}
       </Box>
       {actions}
     </Box>

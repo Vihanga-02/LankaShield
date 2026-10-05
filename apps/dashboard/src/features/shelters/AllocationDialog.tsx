@@ -110,10 +110,10 @@ export function AllocationDialog({
           <Typography variant="h6" sx={{ mt: 1 }}>
             Allocation confirmed
           </Typography>
-          <Typography color="text.secondary">
+          <Typography color="textSecondary">
             {done.count} evacuee{done.count === 1 ? '' : 's'} allocated to {done.shelterName}.
           </Typography>
-          <Typography color="text.secondary" sx={{ mt: 1 }}>
+          <Typography color="textSecondary" sx={{ mt: 1 }}>
             Now {done.currentOccupancy} occupied · {done.availableCapacity} places left
           </Typography>
           <Box sx={{ mt: 1.5 }}>
@@ -144,7 +144,7 @@ export function AllocationDialog({
               <Typography variant="subtitle1">{shelter.name}</Typography>
               <StatusChip presentation={SHELTER_STATUS_PRESENTATION[shelter.status]} />
             </Stack>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="textSecondary">
               {shelter.district} · {shelter.currentOccupancy} / {shelter.capacity} occupied ·{' '}
               <strong>{available} available</strong>
             </Typography>
@@ -205,7 +205,7 @@ export function AllocationDialog({
                 Alternative shelters
               </Typography>
               {alternatives.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="textSecondary">
                   No open shelter can take {count} evacuees. Split the group or register another
                   shelter.
                 </Typography>

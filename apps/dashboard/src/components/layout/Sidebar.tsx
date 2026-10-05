@@ -42,7 +42,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <Typography variant="subtitle1" color="primary" sx={{ lineHeight: 1.2 }}>
             LankaShield
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             Officer dashboard
           </Typography>
         </Box>
@@ -68,7 +68,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
           {user.fullName}
         </Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {USER_ROLE_LABELS[user.role]}
           {user.district ? ` · ${user.district}` : ''}
         </Typography>

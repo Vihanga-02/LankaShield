@@ -82,7 +82,7 @@ function ShelterTable({
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     {s.name}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="textSecondary">
                     {s.address}
                     {s.contactPhone ? ` · ${s.contactName ?? 'Contact'} ${s.contactPhone}` : ''}
                   </Typography>

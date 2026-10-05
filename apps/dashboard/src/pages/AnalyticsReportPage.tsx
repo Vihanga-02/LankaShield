@@ -91,7 +91,7 @@ function MetricTile({ metric }: { metric: ReportMetric }) {
   return (
     <Card sx={{ height: '100%' }}>
       <CardContent>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="textSecondary">
           {METRIC_LABELS[metric.key]}
         </Typography>
         <Typography variant="h4" component="p" sx={{ my: 0.5 }}>
@@ -103,7 +103,7 @@ function MetricTile({ metric }: { metric: ReportMetric }) {
           ) : (
             <WarningAmberOutlined fontSize="small" color="warning" />
           )}
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             {metric.value === null ? 'Unavailable' : metric.complete ? 'Complete' : 'Incomplete'} ·{' '}
             {metric.sourceCollection}
           </Typography>
@@ -340,14 +340,14 @@ function EventAnalytics({ event }: { event: DisasterEvent }) {
             }}>
             <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
               <StatusChip presentation={DISASTER_REPORT_STATUS_PRESENTATION[result.status]} />
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 {isFinal
                   ? 'Completed event with every metric complete.'
                   : `Provisional because ${provisionalReasons.join(' and ')}.`}
               </Typography>
             </Stack>
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 Data as of {formatDateTime(calculatedAt)}
               </Typography>
               <Button
@@ -484,7 +484,7 @@ function EventAnalytics({ event }: { event: DisasterEvent }) {
               </Link>
             ) : null}
           </Stack>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+          <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mt: 1 }}>
             {isFinal
               ? 'Save the report first; only authorised final reports can be shared with donor organisations.'
               : 'Provisional reports can be saved and exported but not shared with donors.'}
@@ -503,7 +503,7 @@ function EventAnalytics({ event }: { event: DisasterEvent }) {
             <ErrorState message={toErrorMessage(history.state.error)} onRetry={history.retry} />
           )}
           {history.state.status === 'success' && history.state.data.length === 0 && (
-            <Typography color="text.secondary">No reports saved yet.</Typography>
+            <Typography color="textSecondary">No reports saved yet.</Typography>
           )}
           {history.state.status === 'success' && history.state.data.length > 0 && (
             <Stack divider={<Divider flexItem />} spacing={1}>
@@ -514,7 +514,7 @@ function EventAnalytics({ event }: { event: DisasterEvent }) {
                   sx={{ flexWrap: 'wrap', alignItems: 'center', gap: 1.5 }}>
                   <StatusChip presentation={DISASTER_REPORT_STATUS_PRESENTATION[r.status]} />
                   <Typography variant="body2">{formatDateTime(r.generatedAt)}</Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="textSecondary">
                     {r.metrics.reportsReceived} reports · {r.metrics.allocatedEvacuees} evacuees
                     {r.missingMetrics.length > 0 ? ` · ${r.missingMetrics.length} incomplete` : ''}
                   </Typography>
@@ -528,7 +528,7 @@ function EventAnalytics({ event }: { event: DisasterEvent }) {
                     </Link>
                   ) : null}
                   {r.shares && r.shares.length > 0 ? (
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="textSecondary">
                       Shared with {r.shares.map((s) => s.organisation).join(', ')}
                     </Typography>
                   ) : null}
@@ -546,7 +546,7 @@ function EventAnalytics({ event }: { event: DisasterEvent }) {
         fullWidth>
         <DialogTitle>Share final report</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
             Records an authorised share of this final report. Donor delivery is mocked in this
             prototype.
           </Typography>
