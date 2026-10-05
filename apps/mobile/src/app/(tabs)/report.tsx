@@ -10,6 +10,7 @@ import {
   toErrorMessage,
   type HazardReportInput,
 } from '@lankashield/shared';
+import { useNetworkState } from 'expo-network';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -39,11 +40,12 @@ const SEVERITY_OPTIONS = SEVERITIES.map((value) => ({ value, label: SEVERITY_LAB
 
 const EMPTY_FORM: Partial<HazardReportInput> = { title: '', description: '', evidence: [] };
 
-function progressLabel(progress: SubmitProgress | null): string {
-  if (!progress) return 'Submit report';
+function progressLabel(progress: SubmitProgress | null, offline: boolean): string {
+  if (!progress) return offline ? 'Save on this device' : 'Submit report';
   if (progress.step === 'checking') return 'Checking connection…';
   if (progress.step === 'uploading')
     return `Uploading photo ${progress.current} of ${progress.total}…`;
+  if (progress.step === 'queueing') return 'Saving on this device…';
   return 'Saving report…';
 }
 
@@ -53,6 +55,8 @@ export default function ReportScreen() {
   const [reportId, setReportId] = useState(() => generateReportId());
   const [progress, setProgress] = useState<SubmitProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const network = useNetworkState();
+  const offline = network.isConnected === false || network.isInternetReachable === false;
 
   const { control, handleSubmit, setValue, reset, formState } = useForm<HazardReportInput>({
     resolver: zodResolver(hazardReportInputSchema),
@@ -65,16 +69,17 @@ export default function ReportScreen() {
     if (!user) return;
     setError(null);
     try {
-      await submitHazardReport({
+      const outcome = await submitHazardReport({
         reportId,
         input,
         reporter: user,
         clientCreatedAt: new Date().toISOString(),
         onProgress: setProgress,
       });
+      // The draft is saved (online or on the device), so a new draft gets a new tracking ID.
       reset(EMPTY_FORM);
       setReportId(generateReportId());
-      router.push({ pathname: '/report-submitted', params: { reportId } });
+      router.push({ pathname: '/report-submitted', params: { reportId, outcome } });
     } catch (err) {
       setError(toErrorMessage(err));
     } finally {
@@ -88,6 +93,12 @@ export default function ReportScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScreenContainer scroll>
         <Text variant="headlineSmall">Report a hazard</Text>
+
+        <Banner visible={offline} icon="cloud-off-outline">
+          {
+            "You're offline. Your report will be saved on this device and sent automatically when you are back online."
+          }
+        </Banner>
 
         <Banner
           visible={!!error}
@@ -200,12 +211,12 @@ export default function ReportScreen() {
 
         <Button
           mode="contained"
-          icon="send"
+          icon={offline ? 'content-save-outline' : 'send'}
           onPress={onSubmit}
           loading={submitting}
           disabled={submitting}
           contentStyle={styles.button}>
-          {progressLabel(progress)}
+          {progressLabel(progress, offline)}
         </Button>
         <Text variant="bodySmall" style={styles.trackingHint}>
           Tracking ID for this report: {reportId}

@@ -16,6 +16,7 @@ import { LoadingState } from '@/components/feedback/LoadingState';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { ReportCard } from '@/features/hazard-reports/components/ReportCard';
 import { useMyReports } from '@/features/hazard-reports/hooks/useMyReports';
+import { SyncBanner } from '@/features/offline-sync/components/SyncBanner';
 import { useAuthStore } from '@/store/authStore';
 
 export default function HomeScreen() {
@@ -32,6 +33,8 @@ export default function HomeScreen() {
           {user ? USER_ROLE_LABELS[user.role] : ''}
         </Text>
       </View>
+
+      <SyncBanner />
 
       <View style={styles.reportCard}>
         <Text variant="titleMedium" style={styles.onPrimary}>

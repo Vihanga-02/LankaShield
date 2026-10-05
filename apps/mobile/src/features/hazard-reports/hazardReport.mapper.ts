@@ -13,7 +13,7 @@ export type HazardReportWrite = Omit<HazardReport, 'createdAt' | 'updatedAt'> & 
   updatedAt: FieldValue;
 };
 
-interface BuildArgs {
+export interface BuildHazardReportArgs {
   reportId: string;
   input: HazardReportInput;
   reporter: Pick<AppUser, 'uid' | 'role'>;
@@ -31,7 +31,7 @@ export function buildHazardReport({
   evidenceUrls,
   clientCreatedAt,
   syncSource,
-}: BuildArgs): HazardReportWrite {
+}: BuildHazardReportArgs): HazardReportWrite {
   return {
     reportId,
     reporterId: reporter.uid,

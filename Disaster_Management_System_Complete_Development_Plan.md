@@ -20,8 +20,9 @@
 | Phase 3 — Shared schemas, rules and seed data | ✅ Done — 50 unit tests pass; seed loaded (72 documents) and re-run without duplicates |
 | Phase 4 — Authentication and application shells | ✅ Done — login/register/session restore, role routing in both apps, 57 unit tests pass |
 | Phase 5 — UC01 online report submission | ✅ Done — form, GPS/map location, evidence upload, My Reports, details, live dashboard queue; 64 unit tests pass |
-| Phase 6 — Offline queue and synchronisation | ⏳ Next |
-| Phases 7–12 | Not started |
+| Phase 6 — Offline queue and synchronisation | ✅ Done — SQLite queue, auto/manual sync, Pending Sync/Syncing/Failed UI; synced once to Firestore in an end-to-end check; 72 unit tests pass |
+| Phase 7 — UC02 verification | ⏳ Next |
+| Phases 8–12 | Not started |
 
 ### 0.2 Decisions made during implementation
 
@@ -56,6 +57,12 @@ These decisions override anything later in this document that disagrees with the
 | D25 | **Lists are sorted on the client** (My Reports by `reporterId`, the queue by `status`), so no composite index is needed yet. | Campus-scale data; avoids index setup until Phase 7 filtering needs it. |
 | D26 | **The district is suggested from reverse geocoding** (`matchDistrict`), and a location outside Sri Lanka shows a warning without blocking the report. Until Phase 6, submitting offline shows a "you're offline" error and keeps the form. | Fewer manual steps; emulators default to a location in the USA. |
 | D27 | **The dashboard Verification Queue is a live list in Phase 5** (onSnapshot on `PENDING_VERIFICATION`). Filters and the review/decision screen are added in Phase 7. | Phase 5 exit condition: a mobile report appears in the queue immediately. |
+| D28 | **The sync algorithm (§13.1) is the shared, unit-tested `syncOfflineReports(store, gateway, uid)`.** Mobile supplies the SQLite store and a Firebase gateway. Only the signed-in user's rows are synced. A report that already exists is not rewritten; if it belongs to another user the row is marked FAILED. | The required "idempotent offline synchronisation" test runs in Vitest without a device. |
+| D29 | **A report is queued when the device is offline *or* when the online submission fails with a network error** (upload/write timeout, `unavailable`). It keeps the same tracking ID. A successful sync deletes the SQLite row and the local photo copies; the Firestore document's `syncSource: 'OFFLINE_QUEUE'` records that it came from the queue. | No report is lost when the connection drops mid-submit; the plan allows deleting the row after confirmation. |
+| D30 | **Queued photos are copied to `documents/offline-evidence/{reportId}/`** (expo-file-system) before the row is saved. | The image picker's cache folder can be cleared by Android before the sync runs. |
+| D31 | **Sync runs on sign-in, on reconnect (expo-network listener), on returning to the foreground, and from "Sync now"/"Retry".** Only one sync runs at a time. A FAILED report can be discarded by the user. On sign-out the queue stays in SQLite (with a warning) and syncs when its owner signs in again. | Matches §13.2 and avoids double uploads from overlapping triggers. |
+| D32 | **Map pickers are full-screen routes (`/location-picker`), never React Native `Modal`s.** The chosen point is handed back through a small Zustand store (`locationPickerStore`). | Keeps the map in the app's own screen stack; a `Modal` is a separate Android window. |
+| D33 | **Known limitation: Google Maps renders black in Expo Go on Android (SDK 57)** — Expo bug [expo/expo#49323](https://github.com/expo/expo/issues/49323), same as [react-native-maps#5888](https://github.com/react-native-maps/react-native-maps/issues/5888). Google rejects Expo Go's built-in key; our own key is not used in Expo Go. GPS location, submission and sync are unaffected. "Choose on map" and the report-details map are tested on the development build after Phase 9. | Fixing it needs our own key in a development build, which is already scheduled (D18). |
 
 ### 0.3 Installed versions
 
@@ -1191,6 +1198,8 @@ Aim for meaningful coverage of core business logic rather than artificially test
 **Mobile**
 
 - Create the Android development build after Phase 9 (D18, D15): set `owner` and `extra.eas.projectId`, add `EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_KEY` to `android.config.googleMaps.apiKey` in `app.config.ts`, then run `npx eas-cli@latest build --profile development --platform android`. Rebuild it whenever a native package is added.
+- Restrict the Android Maps key to package `lk.lankashield.mobile` and the SHA-1 shown by `npx eas-cli@latest credentials`, with Maps SDK for Android enabled.
+- On the development build, test the maps that are black in Expo Go (D33): "Choose on map" (tap, drag, confirm, address and district filled in) and the location map in report details.
 - Produce the final Android APK using EAS Build (a `preview` profile with `"buildType": "apk"`).
 - Test on at least one physical Android device.
 
@@ -1422,7 +1431,7 @@ Run every `npm install` from the repository root so there is one `package-lock.j
 - [ ] Four revised use cases work end to end.
 - [ ] Mobile and web use the same data and statuses.
 - [ ] Offline reporting is demonstrable.
-- [ ] Maps load with valid keys.
+- [ ] Maps load with valid keys (mobile on the development build/APK, not Expo Go — D33).
 - [ ] Verification results appear in the mobile in-app notification list.
 - [ ] PDF export produces a readable report.
 

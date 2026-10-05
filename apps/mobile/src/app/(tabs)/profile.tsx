@@ -1,16 +1,18 @@
 import { toErrorMessage, colors, radius, spacing, USER_ROLE_LABELS } from '@lankashield/shared';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import { Avatar, Button, Divider, HelperText, List, Text } from 'react-native-paper';
 
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { signOutUser } from '@/features/auth/auth.service';
 import { useAuthStore } from '@/store/authStore';
+import { useOfflineQueueStore } from '@/store/offlineQueueStore';
 
 export default function ProfileScreen() {
   const user = useAuthStore((s) => s.user);
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const queued = useOfflineQueueStore((s) => s.items.length);
 
   if (!user) return null;
 
@@ -20,6 +22,18 @@ export default function ProfileScreen() {
     .join('')
     .slice(0, 2)
     .toUpperCase();
+
+  const confirmSignOut = () => {
+    if (queued === 0) return void onSignOut();
+    Alert.alert(
+      'Reports not sent yet',
+      `${queued} report${queued === 1 ? ' is' : 's are'} saved only on this device. They will be sent the next time you sign in on this phone.`,
+      [
+        { text: 'Stay signed in', style: 'cancel' },
+        { text: 'Sign out', style: 'destructive', onPress: () => void onSignOut() },
+      ],
+    );
+  };
 
   const onSignOut = async () => {
     setSigningOut(true);
@@ -69,7 +83,7 @@ export default function ProfileScreen() {
       <Button
         mode="outlined"
         icon="logout"
-        onPress={onSignOut}
+        onPress={confirmSignOut}
         loading={signingOut}
         disabled={signingOut}
         textColor={colors.danger}>

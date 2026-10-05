@@ -1,9 +1,11 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '@lankashield/shared';
 import { Tabs } from 'expo-router';
-import type { ComponentProps } from 'react';
+import { useEffect, type ComponentProps } from 'react';
 import type { ColorValue } from 'react-native';
 
+import { startAutoSync } from '@/features/offline-sync/sync.service';
+import { useOfflineQueueStore } from '@/store/offlineQueueStore';
 import { INTER_FONTS } from '@/theme/paperTheme';
 
 type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
@@ -15,6 +17,11 @@ function tabIcon(name: IconName) {
 }
 
 export default function TabsLayout() {
+  const queued = useOfflineQueueStore((s) => s.items.length);
+
+  // Sync queued reports now, on reconnect and when the app returns to the foreground.
+  useEffect(() => startAutoSync(), []);
+
   return (
     <Tabs
       screenOptions={{
@@ -31,7 +38,12 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="reports"
-        options={{ title: 'My Reports', tabBarIcon: tabIcon('clipboard-list-outline') }}
+        options={{
+          title: 'My Reports',
+          tabBarIcon: tabIcon('clipboard-list-outline'),
+          tabBarBadge: queued > 0 ? queued : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.warning },
+        }}
       />
       <Tabs.Screen
         name="notifications"
