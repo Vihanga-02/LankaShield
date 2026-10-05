@@ -21,8 +21,11 @@
 | Phase 4 — Authentication and application shells | ✅ Done — login/register/session restore, role routing in both apps, 57 unit tests pass |
 | Phase 5 — UC01 online report submission | ✅ Done — form, GPS/map location, evidence upload, My Reports, details, live dashboard queue; 64 unit tests pass |
 | Phase 6 — Offline queue and synchronisation | ✅ Done — SQLite queue, auto/manual sync, Pending Sync/Syncing/Failed UI; synced once to Firestore in an end-to-end check; 72 unit tests pass |
-| Phase 7 — UC02 verification | ⏳ Next |
-| Phases 8–12 | Not started |
+| Phase 7 — UC02 verification | ✅ Done — queue (search, filters, pagination), review screen, transactional decision; second decision blocked (checked against Firebase) |
+| Phase 8 — UC03 shelter management | ✅ Done — list, map, register/edit, transactional allocation with alternatives; concurrent over-allocation refused (checked against Firebase) |
+| Phase 9 — UC04 analytics and reporting | ✅ Done — event selection, filters, metrics, 4 charts, provisional/final, save, PDF export, mocked donor share; 81 unit tests pass |
+| Development build (D18) | ⏳ Next — EAS Android development build; test mobile maps (D33) |
+| Phases 10–12 | Not started |
 
 ### 0.2 Decisions made during implementation
 
@@ -63,6 +66,14 @@ These decisions override anything later in this document that disagrees with the
 | D31 | **Sync runs on sign-in, on reconnect (expo-network listener), on returning to the foreground, and from "Sync now"/"Retry".** Only one sync runs at a time. A FAILED report can be discarded by the user. On sign-out the queue stays in SQLite (with a warning) and syncs when its owner signs in again. | Matches §13.2 and avoids double uploads from overlapping triggers. |
 | D32 | **Map pickers are full-screen routes (`/location-picker`), never React Native `Modal`s.** The chosen point is handed back through a small Zustand store (`locationPickerStore`). | Keeps the map in the app's own screen stack; a `Modal` is a separate Android window. |
 | D33 | **Known limitation: Google Maps renders black in Expo Go on Android (SDK 57)** — Expo bug [expo/expo#49323](https://github.com/expo/expo/issues/49323), same as [react-native-maps#5888](https://github.com/react-native-maps/react-native-maps/issues/5888). Google rejects Expo Go's built-in key; our own key is not used in Expo Go. GPS location, submission and sync are unaffected. "Choose on map" and the report-details map are tested on the development build after Phase 9. | Fixing it needs our own key in a development build, which is already scheduled (D18). |
+| D34 | **The verification decision is a Firestore transaction, not a plain batch.** The report is read inside the transaction, `assertCanReceiveDecision` is checked, and the decision, report update (`status`, `disasterEventId`, `latestDecision`), warning request (escalation only) and reporter notification are written in the same commit. | Same writes as §10.2, but two officers deciding at the same moment cannot both succeed — the second gets ALREADY_VERIFIED. |
+| D35 | **Shelter occupancy changes only through allocations.** The edit form shows occupancy read-only. Edits run in a transaction that reads the latest occupancy and refuses a capacity below it. Closing a shelter sets CLOSED; reopening derives the status again. The duplicate-name check is a warning, not a block. | An edit can never overwrite an allocation made meanwhile. |
+| D36 | **Insufficient-capacity alternatives** are open shelters that fit the whole group: same district first, then most available places, top 5, each with "Allocate here". | Matches §12 Phase 8 and keeps the officer in one dialog. |
+| D37 | **Analytics loads each source independently** (`Promise.allSettled`). A failed source becomes a missing metric (PROVISIONAL), not a failed page. The analysis stays on screen when saving, exporting or sharing fails, and the error offers Retry without recalculating. | Plan §14 and the Phase 9 exit condition. |
+| D38 | **"Shelter occupancy" is labelled "Current shelter occupancy".** Shelters keep no occupancy history, so for a completed event it is today's figure for the event district. "Evacuees allocated" carries the event-specific count. | Avoids presenting a current figure as historical. |
+| D39 | **PDF export** builds the report in the browser with jsPDF (loaded only on export), saves the `responseReports` document first if needed, uploads the PDF to `generated-reports/{id}/report.pdf`, stores `exportedUrl`, then downloads it. **Donor sharing** is enabled only for saved FINAL reports and is recorded in `shares[]` with mocked organisation names. | Plan §10.4 and §18 UC04. |
+| D40 | **Web maps use `@vis.gl/react-google-maps`** with Google's `DEMO_MAP_ID` for Advanced Markers. When the Maps JavaScript API cannot load (no key, auth failure), every map shows a fallback with the coordinates and a Google Maps link. Shelter markers use status colours, the info window and table name the status in text, and the map fits its bounds to the visible shelters. | Phase 10 map requirements met early; the web key must allow the Maps JavaScript API for `localhost` and the Vercel domain. |
+| D41 | **Charts follow one convention:** a single series hue (brand primary) with categories named on the axis, bars ≤ 24 px with 4 px rounded ends, a solid hairline grid, values at the bar tip, tooltips, and a Chart/Table toggle on every chart. The status colours failed a colour-blind separation check as a category palette, so they are not used to tell chart categories apart. | Readable for colour-blind users and in print; every value is also available as a table. |
 
 ### 0.3 Installed versions
 

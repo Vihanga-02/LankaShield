@@ -94,3 +94,22 @@ export function findAlternativeShelters<T extends ShelterCapacity>(
         calculateAvailableCapacity(a.capacity, a.currentOccupancy),
     );
 }
+
+const normaliseName = (name: string) => name.trim().toLowerCase().replace(/\s+/g, ' ');
+
+/** Another shelter in the same district with the same name (case/space-insensitive), if any. */
+export function findDuplicateShelterName<
+  T extends Pick<EmergencyShelter, 'shelterId' | 'name' | 'district'>,
+>(
+  name: string,
+  district: string,
+  shelters: readonly T[],
+  excludeShelterId?: string,
+): T | undefined {
+  const key = normaliseName(name);
+  if (!key) return undefined;
+  return shelters.find(
+    (s) =>
+      s.shelterId !== excludeShelterId && s.district === district && normaliseName(s.name) === key,
+  );
+}

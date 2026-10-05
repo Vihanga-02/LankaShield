@@ -32,6 +32,31 @@ export function createsWarningRequest(outcome: VerificationOutcome): boolean {
   return outcome === 'VERIFIED_ESCALATED';
 }
 
+export const VERIFICATION_OUTCOME_LABELS: Record<VerificationOutcome, string> = {
+  VERIFIED_INFO: 'Verify information',
+  REJECTED: 'Reject report',
+  VERIFIED_ESCALATED: 'Verify and escalate for warning assessment',
+};
+
+const NOTIFICATION_TITLES: Record<VerificationOutcome, string> = {
+  VERIFIED_INFO: 'Your hazard report was verified',
+  REJECTED: 'Your hazard report was rejected',
+  VERIFIED_ESCALATED: 'Your hazard report was verified and escalated',
+};
+
+/** In-app notification text sent to the reporter with a verification decision. */
+export function verificationNotificationText(
+  outcome: VerificationOutcome,
+  reportTitle: string,
+  remarks: string,
+): { title: string; body: string } {
+  const trimmed = remarks.trim();
+  return {
+    title: NOTIFICATION_TITLES[outcome],
+    body: trimmed ? `${reportTitle} — ${trimmed}` : reportTitle,
+  };
+}
+
 /** Statuses counted as verified in analytics (§14). */
 export function isVerifiedStatus(status: HazardReportStatus): boolean {
   return status === 'VERIFIED' || status === 'ESCALATED';

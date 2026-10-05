@@ -47,6 +47,10 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { path: '/profile', label: 'Profile', icon: <AccountCircleOutlined />, roles: ALL },
 ];
 
+/** Roles for a route, including nested routes such as `/verification/:reportId`. */
 export function rolesFor(path: string): readonly DashboardRole[] {
-  return NAV_ITEMS.find((item) => item.path === path)?.roles ?? ALL;
+  const item =
+    NAV_ITEMS.find((i) => i.path === path) ??
+    NAV_ITEMS.find((i) => i.path !== '/' && path.startsWith(`${i.path}/`));
+  return item?.roles ?? ALL;
 }

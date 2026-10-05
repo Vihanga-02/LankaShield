@@ -25,8 +25,10 @@ export const router = createBrowserRouter([
         children: [
           guarded('/', () => import('../pages/OverviewPage')),
           guarded('/verification', () => import('../pages/VerificationQueuePage')),
+          guarded('/verification/:reportId', () => import('../pages/ReportReviewPage')),
           guarded('/shelters', () => import('../pages/SheltersPage')),
           guarded('/analytics', () => import('../pages/AnalyticsPage')),
+          guarded('/analytics/:eventId', () => import('../pages/AnalyticsReportPage')),
           guarded('/notifications', () => import('../pages/NotificationsPage')),
           guarded('/profile', () => import('../pages/ProfilePage')),
           { path: '*', lazy: page(() => import('../pages/NotFoundPage')) },
