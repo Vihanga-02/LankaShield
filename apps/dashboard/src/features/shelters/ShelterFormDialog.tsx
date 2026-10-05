@@ -4,10 +4,12 @@ import {
   districtMapCenter,
   findDuplicateShelterName,
   isWithinSriLanka,
+  matchDistrict,
   shelterInputSchema,
   toErrorMessage,
   type District,
   type EmergencyShelter,
+  type GeoPoint,
   type ShelterInput,
 } from '@lankashield/shared';
 import Alert from '@mui/material/Alert';
@@ -23,13 +25,37 @@ import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 
 import { PointMap } from '../../components/maps/PointMap';
 import { registerShelter, updateShelter } from './shelters.service';
 
 const toNumber = (value: string) => (value === '' ? undefined : Number(value));
+
+async function reverseGeocodeShelterLocation(
+  point: GeoPoint,
+): Promise<{ address: string; district: District }> {
+  const { Geocoder } = (await google.maps.importLibrary(
+    'geocoding',
+  )) as google.maps.GeocodingLibrary;
+  const { results } = await new Geocoder().geocode({
+    location: { lat: point.latitude, lng: point.longitude },
+    region: 'lk',
+  });
+  const result = results[0];
+  const district = matchDistrict(
+    results.flatMap((entry) =>
+      entry.address_components.flatMap((part) => [part.long_name, part.short_name]),
+    ),
+  );
+
+  if (!result?.formatted_address || !district) {
+    throw new Error('The selected location could not be matched to a Sri Lankan district.');
+  }
+
+  return { address: result.formatted_address, district };
+}
 
 /** Register or edit a shelter (UC03). Shows a duplicate-name warning; does not block it. */
 export function ShelterFormDialog({
@@ -47,6 +73,9 @@ export function ShelterFormDialog({
   const editing = !!shelter;
   const [closed, setClosed] = useState(shelter?.status === 'CLOSED');
   const [error, setError] = useState<string | null>(null);
+  const [resolvingLocation, setResolvingLocation] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const locationRequest = useRef(0);
 
   const { control, handleSubmit, formState, setValue } = useForm<ShelterInput>({
     resolver: zodResolver(shelterInputSchema),
@@ -70,6 +99,28 @@ export function ShelterFormDialog({
     name && district
       ? findDuplicateShelterName(name, district, shelters, shelter?.shelterId)
       : undefined;
+
+  const syncLocationDetails = async (point: GeoPoint) => {
+    const request = ++locationRequest.current;
+    setValue('location', point, { shouldDirty: true, shouldValidate: true });
+    setLocationError(null);
+    setResolvingLocation(true);
+
+    try {
+      const details = await reverseGeocodeShelterLocation(point);
+      if (request !== locationRequest.current) return;
+      setValue('address', details.address, { shouldDirty: true, shouldValidate: true });
+      setValue('district', details.district, { shouldDirty: true, shouldValidate: true });
+    } catch {
+      if (request === locationRequest.current) {
+        setLocationError(
+          'Could not update the address and district from this map location. Confirm them before saving.',
+        );
+      }
+    } finally {
+      if (request === locationRequest.current) setResolvingLocation(false);
+    }
+  };
 
   const onSubmit = handleSubmit(async (input) => {
     setError(null);
@@ -127,10 +178,7 @@ export function ShelterFormDialog({
                     const nextDistrict = e.target.value as District;
                     field.onChange(nextDistrict);
                     if (nextDistrict !== district) {
-                      setValue('location', districtMapCenter(nextDistrict), {
-                        shouldDirty: true,
-                        shouldValidate: true,
-                      });
+                      void syncLocationDetails(districtMapCenter(nextDistrict));
                     }
                   }}
                   error={!!fieldState.error}
@@ -239,7 +287,7 @@ export function ShelterFormDialog({
                 </Typography>
                 <PointMap
                   point={field.value}
-                  onPick={field.onChange}
+                  onPick={busy ? undefined : syncLocationDetails}
                   focusPoint={district ? districtMapCenter(district) : undefined}
                   height={260}
                   zoom={13}
@@ -277,6 +325,16 @@ export function ShelterFormDialog({
                     {fieldState.error.message ?? 'Select the shelter location.'}
                   </Typography>
                 ) : null}
+                {resolvingLocation ? (
+                  <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
+                    Updating address and district from the map location…
+                  </Typography>
+                ) : null}
+                {locationError ? (
+                  <Typography variant="caption" color="error" sx={{ display: 'block' }}>
+                    {locationError}
+                  </Typography>
+                ) : null}
               </Box>
             )}
           />
@@ -297,7 +355,11 @@ export function ShelterFormDialog({
         <Button onClick={onClose} disabled={busy}>
           Cancel
         </Button>
-        <Button type="submit" form="shelter-form" variant="contained" disabled={busy}>
+        <Button
+          type="submit"
+          form="shelter-form"
+          variant="contained"
+          disabled={busy || resolvingLocation}>
           {busy ? 'Saving…' : editing ? 'Save changes' : 'Register shelter'}
         </Button>
       </DialogActions>
