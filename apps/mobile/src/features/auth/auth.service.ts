@@ -19,6 +19,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 import { auth, db } from '@/services/firebase';
 import { useAuthStore } from '@/store/authStore';
+import { useOfflineQueueStore } from '@/store/offlineQueueStore';
 
 import { clearCachedProfile, readCachedProfile, writeCachedProfile } from './profileCache';
 
@@ -60,6 +61,8 @@ export async function registerUser(input: RegisterInput): Promise<void> {
 export async function signOutUser(notice?: string): Promise<void> {
   await clearCachedProfile();
   await signOut(auth);
+  // Queued reports stay in SQLite and sync when their owner signs in again (Phase 6).
+  useOfflineQueueStore.getState().setItems([]);
   useAuthStore.getState().setSignedOut(notice);
 }
 

@@ -62,6 +62,16 @@ export default function RootLayout() {
                 headerStyle: { backgroundColor: colors.surface },
               }}
             />
+            <Stack.Screen
+              name="location-picker"
+              options={{
+                headerShown: true,
+                title: 'Choose location',
+                headerTintColor: colors.primary,
+                headerTitleStyle: { fontFamily: INTER_FONTS.semiBold, color: colors.textPrimary },
+                headerStyle: { backgroundColor: colors.surface },
+              }}
+            />
           </Stack.Protected>
           <Stack.Protected guard={!signedIn}>
             <Stack.Screen name="(auth)" />

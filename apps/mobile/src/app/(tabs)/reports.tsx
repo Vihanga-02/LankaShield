@@ -10,6 +10,9 @@ import { ScreenContainer } from '@/components/ScreenContainer';
 import { OptionChips } from '@/features/hazard-reports/components/OptionChips';
 import { ReportCard } from '@/features/hazard-reports/components/ReportCard';
 import { useMyReports } from '@/features/hazard-reports/hooks/useMyReports';
+import { QueuedReportCard } from '@/features/offline-sync/components/QueuedReportCard';
+import { SyncBanner } from '@/features/offline-sync/components/SyncBanner';
+import { useOfflineQueueStore } from '@/store/offlineQueueStore';
 
 type Filter =
   | 'ALL'
@@ -25,9 +28,14 @@ const FILTER_LABELS: Record<Filter, string> = {
 
 export default function MyReportsScreen() {
   const { state, retry } = useMyReports();
+  const queuedItems = useOfflineQueueStore((s) => s.items);
   const [filter, setFilter] = useState<Filter>('ALL');
 
   const reports = state.status === 'success' ? state.data : [];
+  // A report briefly exists in both places between Firestore's confirmation and the queue refresh.
+  const syncedIds = new Set(reports.map((r) => r.reportId));
+  const queued = queuedItems.filter((q) => !syncedIds.has(q.reportId));
+
   const visible = filter === 'ALL' ? reports : reports.filter((r) => r.status === filter);
   const options = (Object.keys(FILTER_LABELS) as Filter[]).map((value) => ({
     value,
@@ -40,6 +48,17 @@ export default function MyReportsScreen() {
     <ScreenContainer scroll>
       <Text variant="headlineSmall">My reports</Text>
 
+      <SyncBanner />
+      {queued.length > 0 && (
+        <>
+          <Text variant="titleSmall">Waiting to sync</Text>
+          {queued.map((item) => (
+            <QueuedReportCard key={item.reportId} report={item} />
+          ))}
+          <Text variant="titleSmall">Submitted</Text>
+        </>
+      )}
+
       {state.status === 'loading' && <LoadingState message="Loading your reports…" />}
       {state.status === 'error' && (
         <ErrorState message={toErrorMessage(state.error)} onRetry={retry} />
@@ -48,9 +67,9 @@ export default function MyReportsScreen() {
       {state.status === 'success' && reports.length === 0 && (
         <EmptyState
           icon="clipboard-list-outline"
-          title="No reports yet"
+          title={queued.length > 0 ? 'Nothing submitted yet' : 'No reports yet'}
           message="Reports you submit appear here with their verification status."
-          actionLabel="Report a hazard"
+          actionLabel={queued.length > 0 ? undefined : 'Report a hazard'}
           onAction={() => router.navigate('/report')}
         />
       )}

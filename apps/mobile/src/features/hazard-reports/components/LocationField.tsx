@@ -8,12 +8,14 @@ import {
   type GeoLocation,
   type GeoPoint,
 } from '@lankashield/shared';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ActivityIndicator, Button, Text } from 'react-native-paper';
 
+import { useLocationPickerStore } from '@/store/locationPickerStore';
+
 import { describeLocation, getCurrentLocation } from '../location.service';
-import { LocationPickerModal } from './LocationPickerModal';
 
 /**
  * GPS location with a map fallback (UC01 steps 4–5). Also suggests the district from the
@@ -32,9 +34,9 @@ export function LocationField({
 }) {
   const [locating, setLocating] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [mapOpen, setMapOpen] = useState(false);
+  const openPicker = useLocationPickerStore((s) => s.open);
 
-  const useGps = async () => {
+  const locateWithGps = async () => {
     setLocating(true);
     setMessage(null);
     const result = await getCurrentLocation();
@@ -47,8 +49,7 @@ export function LocationField({
     if (result.district) onDistrictDetected(result.district);
   };
 
-  const useMapPoint = async (point: GeoPoint) => {
-    setMapOpen(false);
+  const applyMapPoint = async (point: GeoPoint) => {
     setMessage(null);
     onChange({ ...point, source: 'MANUAL' });
     const { address, district } = await describeLocation(point);
@@ -100,7 +101,7 @@ export function LocationField({
         <Button
           mode="outlined"
           icon="crosshairs-gps"
-          onPress={useGps}
+          onPress={locateWithGps}
           disabled={disabled || locating}
           style={styles.flex}>
           {value?.source === 'GPS' ? 'Refresh GPS' : 'Use GPS'}
@@ -108,21 +109,15 @@ export function LocationField({
         <Button
           mode="outlined"
           icon="map-search-outline"
-          onPress={() => setMapOpen(true)}
+          onPress={() => {
+            openPicker(value ?? null, (point) => void applyMapPoint(point));
+            router.push('/location-picker');
+          }}
           disabled={disabled || locating}
           style={styles.flex}>
           Choose on map
         </Button>
       </View>
-
-      {mapOpen ? (
-        <LocationPickerModal
-          visible
-          initial={value}
-          onCancel={() => setMapOpen(false)}
-          onConfirm={useMapPoint}
-        />
-      ) : null}
     </View>
   );
 }
