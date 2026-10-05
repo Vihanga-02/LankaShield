@@ -171,7 +171,11 @@ export function ShelterFormDialog({
                   label="Current occupancy"
                   type="number"
                   value={field.value ?? ''}
-                  onChange={(e) => field.onChange(toNumber(e.target.value))}
+                  // React Hook Form does not support `undefined` as a controlled field value.
+                  // Keep an empty input as null so the user can clear the initial 0 before typing.
+                  onChange={(e) =>
+                    field.onChange(e.target.value === '' ? null : Number(e.target.value))
+                  }
                   error={!!fieldState.error}
                   helperText={
                     fieldState.error?.message ??
