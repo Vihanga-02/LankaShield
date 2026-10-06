@@ -1,3 +1,4 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   colors,
   layout,
@@ -37,6 +38,13 @@ export default function HomeScreen() {
       <SyncBanner />
 
       <View style={styles.reportCard}>
+        <MaterialCommunityIcons
+          pointerEvents="none"
+          name="cellphone-screenshot"
+          size={100}
+          color="rgba(255, 255, 255, 0.17)"
+          style={styles.reportIllustration}
+        />
         <Text variant="titleMedium" style={styles.onPrimary}>
           See a hazard?
         </Text>
@@ -49,7 +57,8 @@ export default function HomeScreen() {
           textColor={colors.primary}
           icon="alert-plus-outline"
           onPress={() => router.navigate('/report')}
-          contentStyle={styles.button}>
+          contentStyle={styles.button}
+          style={styles.cardContent}>
           Report a hazard
         </Button>
       </View>
@@ -95,7 +104,17 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     padding: layout.mobilePagePadding,
     gap: spacing.sm,
+    overflow: 'hidden',
   },
-  onPrimary: { color: colors.surface },
+  reportIllustration: {
+    position: 'absolute',
+    right: 4,
+    top: 4,
+    transform: [{ rotate: '8deg' }],
+  },
+  cardContent: {
+    zIndex: 1,
+  },
+  onPrimary: { color: colors.surface, zIndex: 1 },
   button: { height: layout.buttonHeight },
 });
