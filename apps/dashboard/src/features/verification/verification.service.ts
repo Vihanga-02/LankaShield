@@ -5,13 +5,15 @@ import {
   createsWarningRequest,
   findPossibleDuplicates,
   OUTCOME_TO_REPORT_STATUS,
+  sortReportsNewestFirst,
+  verificationQueueStatuses,
   verificationDecisionInputSchema,
   verificationNotificationText,
   type AppUser,
   type DisasterEvent,
   type DuplicateCandidate,
   type HazardReport,
-  type HazardReportStatus,
+  type VerificationQueueStatusFilter,
   type VerificationDecision,
   type VerificationDecisionInput,
   type WarningRequest,
@@ -32,18 +34,12 @@ import {
 
 import { db } from '../../services/firebase';
 
-export type VerificationQueueStatusFilter =
-  | 'PENDING_VERIFICATION'
-  | 'VERIFIED'
-  | 'REJECTED'
-  | 'ALL';
+export type { VerificationQueueStatusFilter } from '@lankashield/shared';
 
 const reports = () =>
   collection(db, COLLECTIONS.hazardReports).withConverter(converters.hazardReports);
 const reportRef = (id: string) =>
   doc(db, COLLECTIONS.hazardReports, id).withConverter(converters.hazardReports);
-
-const newestFirst = (a: HazardReport, b: HazardReport) => b.createdAt.localeCompare(a.createdAt);
 
 /** Live list of reports with one status (default: waiting for a decision), newest first. */
 export function subscribeToReportsByStatus(
@@ -52,14 +48,9 @@ export function subscribeToReportsByStatus(
   onError: (error: unknown) => void,
 ): Unsubscribe {
   // Sorted in the browser so the query needs no composite index.
-  const statuses: HazardReportStatus[] =
-    status === 'ALL'
-      ? ['PENDING_VERIFICATION', 'VERIFIED', 'REJECTED', 'ESCALATED']
-      : status === 'VERIFIED'
-        ? ['VERIFIED', 'ESCALATED']
-        : [status];
+  const statuses = verificationQueueStatuses(status);
   const q = query(reports(), where('status', 'in', statuses));
-  return onSnapshot(q, (snap) => onData(snap.docs.map((d) => d.data()).sort(newestFirst)), onError);
+  return onSnapshot(q, (snap) => onData(sortReportsNewestFirst(snap.docs.map((d) => d.data()))), onError);
 }
 
 export function subscribeToReport(
