@@ -1,4 +1,4 @@
-import { USER_ROLE_LABELS } from '@lankashield/shared';
+import { colors, USER_ROLE_LABELS } from '@lankashield/shared';
 import LogoutOutlined from '@mui/icons-material/LogoutOutlined';
 import ShieldOutlined from '@mui/icons-material/ShieldOutlined';
 import Avatar from '@mui/material/Avatar';
@@ -34,13 +34,16 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ px: 2.5, py: 2.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <Avatar variant="rounded" sx={{ bgcolor: 'primary.main', width: 36, height: 36 }}>
+      <Box sx={{ px: 3, pt: 3.5, pb: 3, display: 'flex', alignItems: 'center', gap: 1.25 }}>
+        <Avatar variant="rounded" sx={{ bgcolor: 'primary.main', width: 38, height: 38 }}>
           <ShieldOutlined fontSize="small" />
         </Avatar>
         <Box>
-          <Typography variant="subtitle1" color="primary" sx={{ lineHeight: 1.2 }}>
-            LankaShield
+          <Typography variant="subtitle1" sx={{ color: 'text.primary', lineHeight: 1.2 }}>
+            Lanka
+            <Box component="span" sx={{ color: 'primary.main' }}>
+              Shield
+            </Box>
           </Typography>
           <Typography variant="caption" color="textSecondary">
             Officer dashboard
@@ -56,9 +59,34 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             to={item.path}
             selected={isActive(item.path)}
             onClick={onNavigate}
-            sx={{ mb: 0.5 }}>
-            <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.label} />
+            sx={{
+              position: 'relative',
+              minHeight: 48,
+              mb: 0.75,
+              px: 2,
+              color: 'text.secondary',
+              overflow: 'hidden',
+              '& .MuiListItemIcon-root': { color: 'text.secondary' },
+              '&.Mui-selected': {
+                bgcolor: colors.primarySoft,
+                color: 'primary.main',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  left: 0,
+                  top: 7,
+                  bottom: 7,
+                  width: 3,
+                  borderRadius: '0 3px 3px 0',
+                  bgcolor: 'primary.main',
+                },
+              },
+            }}>
+            <ListItemIcon sx={{ minWidth: 42 }}>{item.icon}</ListItemIcon>
+            <ListItemText
+              primary={item.label}
+              slotProps={{ primary: { sx: { fontSize: 14, fontWeight: 500 } } }}
+            />
           </ListItemButton>
         ))}
       </List>
