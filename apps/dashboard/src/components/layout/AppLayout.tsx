@@ -10,7 +10,6 @@ import { Outlet } from 'react-router';
 
 import { CONTENT_PADDING } from '../../theme/theme';
 import { LoadingState } from '../feedback/LoadingState';
-import { MapsProvider } from '../maps/MapsProvider';
 import { Sidebar } from './Sidebar';
 
 const DRAWER_WIDTH = 260;
@@ -67,11 +66,9 @@ export function AppLayout() {
         </AppBar>
 
         <Box component="main" sx={{ p: CONTENT_PADDING, maxWidth: 1400 }}>
-          <MapsProvider>
-            <Suspense fallback={<LoadingState />}>
-              <Outlet />
-            </Suspense>
-          </MapsProvider>
+          <Suspense fallback={<LoadingState />}>
+            <Outlet />
+          </Suspense>
         </Box>
       </Box>
     </Box>

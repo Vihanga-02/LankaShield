@@ -4,7 +4,7 @@ import {
   districtMapCenter,
   findDuplicateShelterName,
   isWithinSriLanka,
-  matchDistrict,
+  lookupLocation,
   shelterInputSchema,
   toErrorMessage,
   type District,
@@ -32,30 +32,6 @@ import { PointMap } from '../../components/maps/PointMap';
 import { registerShelter, updateShelter } from './shelters.service';
 
 const toNumber = (value: string) => (value === '' ? undefined : Number(value));
-
-async function reverseGeocodeShelterLocation(
-  point: GeoPoint,
-): Promise<{ address: string; district: District }> {
-  const { Geocoder } = (await google.maps.importLibrary(
-    'geocoding',
-  )) as google.maps.GeocodingLibrary;
-  const { results } = await new Geocoder().geocode({
-    location: { lat: point.latitude, lng: point.longitude },
-    region: 'lk',
-  });
-  const result = results[0];
-  const district = matchDistrict(
-    results.flatMap((entry) =>
-      entry.address_components.flatMap((part) => [part.long_name, part.short_name]),
-    ),
-  );
-
-  if (!result?.formatted_address || !district) {
-    throw new Error('The selected location could not be matched to a Sri Lankan district.');
-  }
-
-  return { address: result.formatted_address, district };
-}
 
 /** Register or edit a shelter (UC03). Shows a duplicate-name warning; does not block it. */
 export function ShelterFormDialog({
@@ -106,20 +82,18 @@ export function ShelterFormDialog({
     setLocationError(null);
     setResolvingLocation(true);
 
-    try {
-      const details = await reverseGeocodeShelterLocation(point);
-      if (request !== locationRequest.current) return;
+    const details = await lookupLocation(point);
+    if (request !== locationRequest.current) return;
+
+    if (details) {
       setValue('address', details.address, { shouldDirty: true, shouldValidate: true });
       setValue('district', details.district, { shouldDirty: true, shouldValidate: true });
-    } catch {
-      if (request === locationRequest.current) {
-        setLocationError(
-          'Could not update the address and district from this map location. Confirm them before saving.',
-        );
-      }
-    } finally {
-      if (request === locationRequest.current) setResolvingLocation(false);
+    } else {
+      setLocationError(
+        'Could not update the address and district from this map location. Confirm them before saving.',
+      );
     }
+    setResolvingLocation(false);
   };
 
   const onSubmit = handleSubmit(async (input) => {
@@ -276,67 +250,74 @@ export function ShelterFormDialog({
           <Controller
             control={control}
             name="location"
-            render={({ field, fieldState }) => (
-              <Box>
-                <Typography variant="subtitle2" gutterBottom>
-                  Location
-                </Typography>
-                <Typography variant="body2" color="textSecondary" gutterBottom>
-                  Select the district first. Its centre is used as a starting point; then click or
-                  drag the marker to the shelter's exact location.
-                </Typography>
-                <PointMap
-                  point={field.value}
-                  onPick={busy ? undefined : syncLocationDetails}
-                  focusPoint={district ? districtMapCenter(district) : undefined}
-                  height={260}
-                  zoom={13}
-                />
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1.5 }}>
-                  <TextField
-                    size="small"
-                    label="Latitude"
-                    type="number"
-                    value={field.value?.latitude ?? ''}
-                    onChange={(e) =>
-                      field.onChange({
-                        latitude: Number(e.target.value),
-                        longitude: field.value?.longitude ?? 0,
-                      })
-                    }
-                    disabled={busy}
+            render={({ field, fieldState }) => {
+              const syncTypedLocation = () => {
+                if (field.value) void syncLocationDetails(field.value);
+              };
+
+              return (
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Location
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary" gutterBottom>
+                    Click the map or drag the marker to update the address and district
+                    automatically.
+                  </Typography>
+                  <PointMap
+                    point={field.value}
+                    onPick={busy ? undefined : syncLocationDetails}
+                    height={260}
+                    zoom={13}
                   />
-                  <TextField
-                    size="small"
-                    label="Longitude"
-                    type="number"
-                    value={field.value?.longitude ?? ''}
-                    onChange={(e) =>
-                      field.onChange({
-                        latitude: field.value?.latitude ?? 0,
-                        longitude: Number(e.target.value),
-                      })
-                    }
-                    disabled={busy}
-                  />
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1.5 }}>
+                    <TextField
+                      size="small"
+                      label="Latitude"
+                      type="number"
+                      value={field.value?.latitude ?? ''}
+                      onChange={(e) =>
+                        field.onChange({
+                          latitude: Number(e.target.value),
+                          longitude: field.value?.longitude ?? 0,
+                        })
+                      }
+                      onBlur={syncTypedLocation}
+                      disabled={busy}
+                    />
+                    <TextField
+                      size="small"
+                      label="Longitude"
+                      type="number"
+                      value={field.value?.longitude ?? ''}
+                      onChange={(e) =>
+                        field.onChange({
+                          latitude: field.value?.latitude ?? 0,
+                          longitude: Number(e.target.value),
+                        })
+                      }
+                      onBlur={syncTypedLocation}
+                      disabled={busy}
+                    />
+                  </Box>
+                  {fieldState.error ? (
+                    <Typography variant="caption" color="error">
+                      {fieldState.error.message ?? 'Select the shelter location.'}
+                    </Typography>
+                  ) : null}
+                  {resolvingLocation ? (
+                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
+                      Updating address and district from the map location…
+                    </Typography>
+                  ) : null}
+                  {locationError ? (
+                    <Typography variant="caption" color="error" sx={{ display: 'block' }}>
+                      {locationError}
+                    </Typography>
+                  ) : null}
                 </Box>
-                {fieldState.error ? (
-                  <Typography variant="caption" color="error">
-                    {fieldState.error.message ?? 'Select the shelter location.'}
-                  </Typography>
-                ) : null}
-                {resolvingLocation ? (
-                  <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
-                    Updating address and district from the map location…
-                  </Typography>
-                ) : null}
-                {locationError ? (
-                  <Typography variant="caption" color="error" sx={{ display: 'block' }}>
-                    {locationError}
-                  </Typography>
-                ) : null}
-              </Box>
-            )}
+              );
+            }}
           />
 
           <FormControlLabel

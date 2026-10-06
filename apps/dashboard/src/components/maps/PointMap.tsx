@@ -1,97 +1,75 @@
-import {
-  colors,
-  isWithinSriLanka,
-  SRI_LANKA_BOUNDS,
-  SRI_LANKA_REGION,
-  type GeoPoint,
-} from '@lankashield/shared';
-import { AdvancedMarker, Map, Pin, type MapMouseEvent, useMap } from '@vis.gl/react-google-maps';
+import { colors, type GeoPoint } from '@lankashield/shared';
+import type { Marker as LeafletMarker } from 'leaflet';
 import { useEffect, useRef } from 'react';
+import { Marker, useMap, useMapEvents } from 'react-leaflet';
 
+import { SRI_LANKA_CENTER, SRI_LANKA_ZOOM, toLatLng } from './config';
 import { MapFrame } from './MapFrame';
-import { MAP_ID } from './config';
+import { pinIcon } from './markers';
 
-const toLatLng = (p: GeoPoint) => ({ lat: p.latitude, lng: p.longitude });
+const round6 = (n: number) => Math.round(n * 1e6) / 1e6;
+const pointFrom = (lat: number, lng: number): GeoPoint => ({
+  latitude: round6(lat),
+  longitude: round6(lng),
+});
 
-function MapFocus({ latitude, longitude }: Partial<GeoPoint>) {
-  const map = useMap();
-  const previousKey = useRef<string | undefined>(undefined);
-
-  useEffect(() => {
-    if (!map || latitude === undefined || longitude === undefined) return;
-    const key = `${latitude},${longitude}`;
-    if (previousKey.current && previousKey.current !== key) {
-      map.panTo({ lat: latitude, lng: longitude });
-      map.setZoom(13);
-    }
-    previousKey.current = key;
-  }, [latitude, longitude, map]);
-
+function ClickToPick({ onPick }: { onPick: (point: GeoPoint) => void }) {
+  useMapEvents({
+    click: (e) => onPick(pointFrom(e.latlng.lat, e.latlng.lng)),
+  });
   return null;
 }
 
-/**
- * One location on a map. With `onPick`, clicking the map moves the pin (shelter location);
- * without it, the map just shows the point (report review).
- */
+function FollowPoint({ point, zoom }: { point?: GeoPoint; zoom: number }) {
+  const map = useMap();
+  const hadPoint = useRef(!!point);
+  useEffect(() => {
+    if (!point) return;
+    const latLng = toLatLng(point);
+    if (!hadPoint.current) map.setView(latLng, zoom);
+    else if (!map.getBounds().contains(latLng)) map.panTo(latLng);
+    hadPoint.current = true;
+  }, [map, point, zoom]);
+  return null;
+}
+
 export function PointMap({
   point,
   onPick,
-  focusPoint,
   height = 320,
   zoom = 14,
 }: {
   point?: GeoPoint;
   onPick?: (point: GeoPoint) => void;
-  focusPoint?: GeoPoint;
   height?: number;
   zoom?: number;
 }) {
-  const validPoint = point && isWithinSriLanka(point) ? point : undefined;
-  const center = validPoint ?? focusPoint ?? SRI_LANKA_REGION;
-
-  const pickPoint = (latitude: number, longitude: number) => {
-    const next = { latitude, longitude };
-    if (onPick && isWithinSriLanka(next)) onPick(next);
-  };
-
-  const onClick = (event: MapMouseEvent) => {
-    const latLng = event.detail.latLng;
-    if (latLng) pickPoint(latLng.lat, latLng.lng);
-  };
-
-  const onDragEnd = (event: google.maps.MapMouseEvent) => {
-    const latLng = event.latLng;
-    if (latLng) pickPoint(latLng.lat(), latLng.lng());
-  };
-
   return (
-    <MapFrame height={height} point={point}>
-      <Map
-        mapId={MAP_ID}
-        defaultCenter={toLatLng(center)}
-        defaultZoom={validPoint ? zoom : focusPoint ? 12 : 7}
-        gestureHandling="cooperative"
-        streetViewControl={false}
-        mapTypeControl={false}
-        restriction={onPick ? { latLngBounds: SRI_LANKA_BOUNDS, strictBounds: true } : undefined}
-        onClick={onPick ? onClick : undefined}
-        style={{ width: '100%', height: '100%' }}>
-        <MapFocus latitude={focusPoint?.latitude} longitude={focusPoint?.longitude} />
-        {validPoint ? (
-          <AdvancedMarker
-            position={toLatLng(validPoint)}
-            title={onPick ? 'Drag to adjust the shelter location' : 'Location'}
-            draggable={!!onPick}
-            onDragEnd={onPick ? onDragEnd : undefined}>
-            <Pin
-              background={colors.primary}
-              borderColor={colors.primaryHover}
-              glyphColor={colors.surface}
-            />
-          </AdvancedMarker>
-        ) : null}
-      </Map>
+    <MapFrame
+      height={height}
+      center={point ? toLatLng(point) : SRI_LANKA_CENTER}
+      zoom={point ? zoom : SRI_LANKA_ZOOM}
+      point={point}>
+      {onPick ? <ClickToPick onPick={onPick} /> : null}
+      <FollowPoint point={point} zoom={zoom} />
+      {point ? (
+        <Marker
+          position={toLatLng(point)}
+          icon={pinIcon(colors.primary)}
+          title="Location"
+          draggable={!!onPick}
+          eventHandlers={
+            onPick
+              ? {
+                  dragend: (e) => {
+                    const { lat, lng } = (e.target as LeafletMarker).getLatLng();
+                    onPick(pointFrom(lat, lng));
+                  },
+                }
+              : undefined
+          }
+        />
+      ) : null}
     </MapFrame>
   );
 }
