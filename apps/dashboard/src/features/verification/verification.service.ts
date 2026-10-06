@@ -5,13 +5,16 @@ import {
   createsWarningRequest,
   findPossibleDuplicates,
   OUTCOME_TO_REPORT_STATUS,
+  verificationDecisionInputSchema,
   verificationNotificationText,
   type AppUser,
   type DisasterEvent,
   type DuplicateCandidate,
   type HazardReport,
   type HazardReportStatus,
+  type VerificationDecision,
   type VerificationDecisionInput,
+  type WarningRequest,
 } from '@lankashield/shared';
 import { converters } from '@lankashield/shared/firestore';
 import {
@@ -29,6 +32,12 @@ import {
 
 import { db } from '../../services/firebase';
 
+export type VerificationQueueStatusFilter =
+  | 'PENDING_VERIFICATION'
+  | 'VERIFIED'
+  | 'REJECTED'
+  | 'ALL';
+
 const reports = () =>
   collection(db, COLLECTIONS.hazardReports).withConverter(converters.hazardReports);
 const reportRef = (id: string) =>
@@ -38,12 +47,18 @@ const newestFirst = (a: HazardReport, b: HazardReport) => b.createdAt.localeComp
 
 /** Live list of reports with one status (default: waiting for a decision), newest first. */
 export function subscribeToReportsByStatus(
-  status: HazardReportStatus,
+  status: VerificationQueueStatusFilter,
   onData: (reports: HazardReport[]) => void,
   onError: (error: unknown) => void,
 ): Unsubscribe {
   // Sorted in the browser so the query needs no composite index.
-  const q = query(reports(), where('status', '==', status));
+  const statuses: HazardReportStatus[] =
+    status === 'ALL'
+      ? ['PENDING_VERIFICATION', 'VERIFIED', 'REJECTED', 'ESCALATED']
+      : status === 'VERIFIED'
+        ? ['VERIFIED', 'ESCALATED']
+        : [status];
+  const q = query(reports(), where('status', 'in', statuses));
   return onSnapshot(q, (snap) => onData(snap.docs.map((d) => d.data()).sort(newestFirst)), onError);
 }
 
@@ -102,17 +117,18 @@ export async function submitVerificationDecision({
   input,
 }: {
   reportId: string;
-  officer: Pick<AppUser, 'uid'>;
+  officer: Pick<AppUser, 'uid' | 'fullName'>;
   input: VerificationDecisionInput;
 }): Promise<{ decisionId: string }> {
+  const validatedInput = verificationDecisionInputSchema.parse(input);
   return runTransaction(db, async (tx) => {
     const snap = await tx.get(reportRef(reportId));
     if (!snap.exists()) throw new AppError('REPORT_NOT_FOUND');
     const report = snap.data();
     assertCanReceiveDecision(report.status);
 
-    const remarks = input.remarks.trim();
-    const disasterEventId = input.disasterEventId || undefined;
+    const remarks = validatedInput.remarks.trim();
+    const disasterEventId = validatedInput.disasterEventId || undefined;
     const decisionRef = doc(collection(db, COLLECTIONS.verificationDecisions));
     const decisionId = decisionRef.id;
 
@@ -120,7 +136,8 @@ export async function submitVerificationDecision({
       decisionId,
       reportId,
       officerId: officer.uid,
-      outcome: input.outcome,
+      officerName: officer.fullName,
+      outcome: validatedInput.outcome,
       remarks,
       disasterEventId,
       decidedAt: serverTimestamp(),
@@ -129,13 +146,20 @@ export async function submitVerificationDecision({
 
     // update() bypasses the converter, so only defined fields are written.
     tx.update(reportRef(reportId), {
-      status: OUTCOME_TO_REPORT_STATUS[input.outcome],
+      status: OUTCOME_TO_REPORT_STATUS[validatedInput.outcome],
       ...(disasterEventId ? { disasterEventId } : {}),
-      latestDecision: { decisionId, outcome: input.outcome, remarks, decidedAt: serverTimestamp() },
+      latestDecision: {
+        decisionId,
+        officerId: officer.uid,
+        officerName: officer.fullName,
+        outcome: validatedInput.outcome,
+        remarks,
+        decidedAt: serverTimestamp(),
+      },
       updatedAt: serverTimestamp(),
     });
 
-    if (createsWarningRequest(input.outcome)) {
+    if (createsWarningRequest(validatedInput.outcome)) {
       const warningRef = doc(collection(db, COLLECTIONS.warningRequests));
       tx.set(warningRef.withConverter(converters.warningRequests), {
         warningRequestId: warningRef.id,
@@ -145,6 +169,7 @@ export async function submitVerificationDecision({
         severity: report.severity,
         affectedDistrict: report.district,
         status: 'PENDING_ASSESSMENT',
+        deliveryStatus: 'PENDING',
         createdAt: serverTimestamp(),
       });
     }
@@ -154,7 +179,7 @@ export async function submitVerificationDecision({
       notificationId: notificationRef.id,
       recipientId: report.reporterId,
       type: 'VERIFICATION_RESULT',
-      ...verificationNotificationText(input.outcome, report.title, remarks),
+      ...verificationNotificationText(validatedInput.outcome, report.title, remarks),
       relatedEntityId: reportId,
       read: false,
       // The in-app record is the delivery channel, created in the same commit.
@@ -163,5 +188,56 @@ export async function submitVerificationDecision({
     });
 
     return { decisionId };
+  });
+}
+
+/** Live audit records and delivery results persisted by the warning sender. */
+export function subscribeToDecision(
+  decisionId: string,
+  onData: (decision: VerificationDecision | null) => void,
+  onError: (error: unknown) => void,
+): Unsubscribe {
+  return onSnapshot(
+    doc(db, COLLECTIONS.verificationDecisions, decisionId).withConverter(
+      converters.verificationDecisions,
+    ),
+    (snap) => onData(snap.exists() ? snap.data() : null),
+    onError,
+  );
+}
+
+export function subscribeToWarnings(
+  reportId: string,
+  onData: (warnings: WarningRequest[]) => void,
+  onError: (error: unknown) => void,
+): Unsubscribe {
+  return onSnapshot(
+    query(
+      collection(db, COLLECTIONS.warningRequests).withConverter(converters.warningRequests),
+      where('sourceReportId', '==', reportId),
+    ),
+    (snap) => onData(snap.docs.map((d) => d.data())),
+    onError,
+  );
+}
+
+export async function loadOfficerName(officerId: string): Promise<string> {
+  const snap = await getDoc(doc(db, COLLECTIONS.users, officerId).withConverter(converters.users));
+  return snap.exists() ? snap.data().fullName : officerId;
+}
+
+/** Updates warning delivery status: Warning Pending -> Sent / Failed */
+export async function recordWarningDeliveryResult(
+  warningRequestId: string,
+  result: 'SENT' | 'FAILED',
+): Promise<void> {
+  if (result !== 'SENT' && result !== 'FAILED') throw new AppError('VALIDATION_FAILED');
+  const ref = doc(db, COLLECTIONS.warningRequests, warningRequestId).withConverter(
+    converters.warningRequests,
+  );
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) throw new AppError('INCOMPLETE_DATA', 'Warning request not found.');
+    tx.update(ref, { deliveryStatus: result, updatedAt: serverTimestamp() });
   });
 }

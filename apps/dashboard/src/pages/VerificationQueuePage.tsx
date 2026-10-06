@@ -7,7 +7,6 @@ import {
   toErrorMessage,
   USER_ROLE_LABELS,
   type HazardReport,
-  type HazardReportStatus,
   type HazardType,
   type Severity,
 } from '@lankashield/shared';
@@ -39,6 +38,7 @@ import { LoadingState } from '../components/feedback/LoadingState';
 import { StatusChip } from '../components/feedback/StatusChip';
 import { PageHeader } from '../components/layout/PageHeader';
 import { useVerificationQueue } from '../features/verification/useVerificationQueue';
+import type { VerificationQueueStatusFilter } from '../features/verification/verification.service';
 import { formatDateTime, formatRelative } from '../utils/format';
 
 const SEVERITY_COLOR = {
@@ -48,11 +48,11 @@ const SEVERITY_COLOR = {
   EXTREME: 'error',
 } as const;
 
-const STATUS_OPTIONS: HazardReportStatus[] = [
-  'PENDING_VERIFICATION',
-  'VERIFIED',
-  'ESCALATED',
-  'REJECTED',
+const STATUS_FILTER_OPTIONS: { value: VerificationQueueStatusFilter; label: string }[] = [
+  { value: 'PENDING_VERIFICATION', label: 'Pending Verification' },
+  { value: 'VERIFIED', label: 'Verified' },
+  { value: 'REJECTED', label: 'Rejected' },
+  { value: 'ALL', label: 'All' },
 ];
 
 interface Filters {
@@ -154,7 +154,7 @@ function QueueTable({ reports }: { reports: HazardReport[] }) {
 
 /** UC02 verification queue: live list with search, filters and pagination. */
 export default function VerificationQueuePage() {
-  const [status, setStatus] = useState<HazardReportStatus>('PENDING_VERIFICATION');
+  const [status, setStatus] = useState<VerificationQueueStatusFilter>('PENDING_VERIFICATION');
   const { state, retry } = useVerificationQueue(status);
   const [filters, setFilters] = useState<Filters>({
     search: '',
@@ -175,6 +175,19 @@ export default function VerificationQueuePage() {
     setPage(0);
   };
 
+  const getStatusLabel = () => {
+    switch (status) {
+      case 'ALL':
+        return 'total reports';
+      case 'PENDING_VERIFICATION':
+        return 'pending verification';
+      case 'VERIFIED':
+        return 'verified';
+      case 'REJECTED':
+        return 'rejected';
+    }
+  };
+
   return (
     <>
       <PageHeader
@@ -184,7 +197,7 @@ export default function VerificationQueuePage() {
           state.status === 'success' ? (
             <Chip
               icon={<FiberManualRecord sx={{ fontSize: 12 }} />}
-              label={`Live · ${all.length} ${HAZARD_REPORT_STATUS_PRESENTATION[status].label.toLowerCase()}`}
+              label={`Live · ${all.length} ${getStatusLabel()}`}
               color="success"
               variant="outlined"
             />
@@ -217,13 +230,13 @@ export default function VerificationQueuePage() {
             label="Status"
             value={status}
             onChange={(e) => {
-              setStatus(e.target.value as HazardReportStatus);
+              setStatus(e.target.value as VerificationQueueStatusFilter);
               setPage(0);
             }}
             sx={{ minWidth: 200 }}>
-            {STATUS_OPTIONS.map((s) => (
-              <MenuItem key={s} value={s}>
-                {HAZARD_REPORT_STATUS_PRESENTATION[s].label}
+            {STATUS_FILTER_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
               </MenuItem>
             ))}
           </TextField>
@@ -283,7 +296,11 @@ export default function VerificationQueuePage() {
             title={
               status === 'PENDING_VERIFICATION'
                 ? 'No reports waiting for verification'
-                : `No ${HAZARD_REPORT_STATUS_PRESENTATION[status].label.toLowerCase()} reports`
+                : status === 'VERIFIED'
+                  ? 'No verified reports'
+                  : status === 'REJECTED'
+                    ? 'No rejected reports'
+                    : 'No reports found'
             }
             message={
               status === 'PENDING_VERIFICATION'

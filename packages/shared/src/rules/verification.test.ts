@@ -15,7 +15,7 @@ describe('verification transitions', () => {
     expect(OUTCOME_TO_REPORT_STATUS).toEqual({
       VERIFIED_INFO: 'VERIFIED',
       REJECTED: 'REJECTED',
-      VERIFIED_ESCALATED: 'ESCALATED',
+      VERIFIED_ESCALATED: 'VERIFIED',
     });
   });
 
