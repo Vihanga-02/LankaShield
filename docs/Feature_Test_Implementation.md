@@ -10,7 +10,6 @@ You don't need to read any code. Each test has steps, the expected result, and a
 **Not covered here.** These come later, so don't log them as missing:
 
 - Notifications lists on mobile and web (Phase 10).
-- Maps inside the mobile app. They need the Android development build; see [section 3](#3-known-limitations-not-bugs).
 - Deployment, the installable APK, and security rules (Phases 11–12).
 
 ---
@@ -179,8 +178,8 @@ Status rules:
 
 | # | What you will see | Why | Status |
 | --- | --- | --- | --- |
-| L1 | **Mobile maps are black or blank in Expo Go.** This affects "Choose on map" and the Location map on Report details. | A known Expo Go problem with Google Maps. It works in the Android development build. | Tests marked 🔸 are deferred ([section 12](#12-deferred-until-the-android-development-build)) |
-| L2 | **Web maps show "Maps are not configured (no web API key)."** or "The map could not be loaded…", with coordinates and an "open in Google Maps" link. | The Google Maps web key is missing or not allowed for `localhost`. This fallback is intended behaviour. | Pass if the fallback shows the right coordinates. Tell the project owner if you expected a real map. |
+| L1 | **A map shows "The map could not be loaded…" or "Map tiles could not be loaded…"** | Maps use the free OpenStreetMap servers and need internet. They may be slow or busy at times. | Expected when offline. The coordinates are still shown, and on the web there is an "open in OpenStreetMap" link. Report it if it happens while online. |
+| L2 | **The district is sometimes not filled in from the map**, with "The district could not be detected…" | The free OpenStreetMap address lookup is best effort. Points at sea, outside Sri Lanka or exactly on a border may have no district. | Expected. Choose the district from the list. Report it if it **never** works while online. |
 | L3 | The mobile **Notifications** tab says "No notifications". The web **Notifications** page is a placeholder. On mobile Home, "Active warnings" always says "No active warnings". | Built in Phase 10 | Not tested now |
 | L4 | **Share with donor** doesn't contact a real organisation, and the organisation names end in "(mock)". | Donor delivery is simulated for the prototype | Expected |
 | L5 | In Expo Go, turning on airplane mode may show "Disconnected from Metro" or a similar message. | Expo Go loses contact with the laptop | Ignore it. **Don't reload the app while offline**, because Expo Go needs the laptop to load it. |
@@ -202,7 +201,7 @@ Status rules:
 
 ### Recording
 
-- Fill in the **Result** column with **Pass**, **Fail**, **Blocked** (couldn't run it) or **Deferred** (🔸 tests).
+- Fill in the **Result** column with **Pass**, **Fail**, **Blocked** (couldn't run it) or **Deferred** (the items in section 12).
 - For every Fail, write a bug report using the [template](#13-bug-report-template) and put its number in the Result column, for example `Fail – BUG-03`.
 - Text in "quotes" is the exact message the app should show. A different message is worth noting, even if the behaviour is right.
 - "Live" means the screen should update **by itself** within a few seconds, without a page refresh.
@@ -265,13 +264,16 @@ Sign in on the phone as `citizen.demo@example.com`, or your own citizen account.
 | P5-08 | Camera permission denied | Deny camera access for Expo Go, then tap "Take photo". | "Camera permission was denied. Choose a photo from the gallery." | |
 | P5-09 | Submit online | Fill in every field with 2 photos. Note the "Tracking ID for this report" shown under the button, then tap "Submit report". | The button shows "Uploading photo 1 of 2…", "Uploading photo 2 of 2…" and then "Saving report…".<br>The **Report submitted** screen shows the **same tracking ID** (format `LS-YYYYMMDD-XXXXXX`), a **Pending Verification** badge and "A Duty Officer will review your report…". | |
 | P5-10 | Report appears on web (live) | Watch the dashboard Verification Queue while doing P5-09. | The new report appears **without refreshing**. The "Live · N pending verification" count goes up by 1.<br>The row shows your title and tracking ID, the district and address, reporter "Citizen", evidence count **2** and an age of "just now" or similar. | |
-| P5-11 | Report details | On Report submitted, tap "View report". | Shows the status badge, title, "Hazard · Severity severity · District", the tracking ID, "Waiting for a Duty Officer to review this report.", the description, "Evidence (2)" with both photos, and the Submitted and Last updated times. The address or coordinates text under Location is correct. (The map itself is black, see L1 🔸.) | |
+| P5-11 | Report details | On Report submitted, tap "View report". | Shows the status badge, title, "Hazard · Severity severity · District", the tracking ID, "Waiting for a Duty Officer to review this report.", the description, "Evidence (2)" with both photos, and the Submitted and Last updated times. The address or coordinates text under Location is correct. The Location map shows the report's pin on OpenStreetMap, with the "© OpenStreetMap contributors" credit. | |
 | P5-12 | My Reports | Open **My Reports**. | Your new report is at the top.<br>Filter chips show counts. For the demo citizen before your own reports: **All 9, Pending 2, Verified 4, Escalated 1, Rejected 2**.<br>Each chip filters the list. An empty filter shows a message such as "No escalated reports". Tapping a report opens its details. | |
 | P5-13 | Home recent reports | Open **Home**. | "Recent reports" shows the newest 3 reports with "See all", which opens My Reports. | |
 | P5-14 | Report another | Submit a report, then tap "Report another hazard". | The form is empty, and the tracking ID under the button is **new**. | |
 | P5-15 | No double submission | Fill the form and tap "Submit report" twice quickly. | Only **one** report is created. The button is disabled while it sends. Check the web queue: only one row has that tracking ID. | |
 | P5-16 | Volunteer report | Sign in as `volunteer.demo@example.com` and submit a report. | On the web queue, the reporter column shows "Community Volunteer". | |
-| P5-17 🔸 | Choose on map | Tap "Choose on map", tap a point and then "Use this location". | **Deferred (L1).** In the development build: the pin is placed and can be dragged, the address shows "Selected on map", and the district is detected. | Deferred |
+| P5-17 | Choose on map | Tap "Choose on map". Tap a point on the map, then drag the pin a little, then tap "Use this location". | The map shows OpenStreetMap with the credit line. The pin moves to where you tap and can be dragged; the coordinates under the map update. Back on the form, the location shows the address (or coordinates) with "Selected on map". | |
+| P5-18 | District from the map | Set the District to something wrong (e.g. Jaffna). Then use "Choose on map" to pick a point in **Kandy** town, then a point in **Galle**. | After each pick the **District** changes by itself to **Kandy**, then **Galle**, within a few seconds. | |
+| P5-19 | My location on the map | In "Choose on map", tap **My location**. | The map moves to your GPS position and the pin is placed there. With location permission denied, you see the permission message instead. | |
+| P5-20 | Outside Sri Lanka or at sea | In "Choose on map", zoom out and pick a point in India, then a point in the sea off Sri Lanka's coast. | For India: "This location is outside Sri Lanka." under the map, and the form shows "This location is outside Sri Lanka. Check it before submitting." For the sea: "The district could not be detected from this location. Choose it below." | |
 
 ---
 
@@ -312,7 +314,7 @@ Web dashboard, signed in as the **Duty Officer**. Also keep the phone signed in 
 | P7-04 | Filters together | With status Verified, set Hazard type Flood, Severity High and District Ratnapura. Then set them back to "All". | Only rows matching **all** the filters show. Clearing the filters brings every row back. | |
 | P7-05 | Pagination | Change "Rows per page" (10/25/50). If more than 10 rows are listed, use the next-page arrow. | Paging and row counts are correct. Changing a filter returns you to page 1. | |
 | P7-06 | Open a report | Click a row. Also try pressing Tab to reach a row and then Enter. | The review page opens for that report. | |
-| P7-07 | Review page contents | Open **LS-SEED-013**. | **Header:** the title, the tracking ID with a **Copy** button (paste it somewhere to check), and a **Pending Verification** chip.<br>**Report:** Flood, High, Ratnapura, the Received and Submitted times, and the description.<br>**Evidence (0):** "No photos were attached."<br>**Location:** a map with a marker, or the L2 fallback, plus the coordinates and "GPS".<br>**Reporter:** Nimal Perera, Citizen, citizen.demo@example.com, 0771234567.<br>**Possible duplicates (0):** "No other flood reports within 1 km and 24 hours." | |
+| P7-07 | Review page contents | Open **LS-SEED-013**. | **Header:** the title, the tracking ID with a **Copy** button (paste it somewhere to check), and a **Pending Verification** chip.<br>**Report:** Flood, High, Ratnapura, the Received and Submitted times, and the description.<br>**Evidence (0):** "No photos were attached."<br>**Location:** an OpenStreetMap map with a pin, plus the coordinates and "GPS".<br>**Reporter:** Nimal Perera, Citizen, citizen.demo@example.com, 0771234567.<br>**Possible duplicates (0):** "No other flood reports within 1 km and 24 hours." | |
 | P7-08 | Evidence photos | Open a report you submitted with photos. | Thumbnails show. Clicking one opens the full image in a new tab. | |
 | P7-09 | Duplicate indicator | On the phone, submit **two reports of the same hazard type** from the same place (GPS) a few minutes apart. Open either one on the web. Then submit a third report from the same place with a **different** hazard type. | "Possible duplicates (1)" lists the other report with "… m away · … h apart · status". The link opens it. The different-hazard report is **not** listed as a duplicate. | |
 | P7-10 | Decision required | On a pending report, click "Record decision" without choosing anything. | "Choose a decision." | |
@@ -335,11 +337,11 @@ Web dashboard, signed in as the **District Officer**. The expected numbers assum
 
 | ID | Test | Steps | Expected result | Result |
 | --- | --- | --- | --- | --- |
-| P8-01 | Shelters page | Open **Shelters**. | Status summary: **Available 3, Nearly Full 1, Full 1, Closed 1**.<br>The map shows 6 coloured markers zoomed to fit them all (or the L2 fallback).<br>The table matches the shelter table in [section 2](#shelters): occupancy bar and %, available places, status chip, contact under the address. | |
+| P8-01 | Shelters page | Open **Shelters**. | Status summary: **Available 3, Nearly Full 1, Full 1, Closed 1**.<br>The OpenStreetMap map shows 6 coloured pins zoomed to fit them all, with the "© OpenStreetMap contributors" credit.<br>The table matches the shelter table in [section 2](#shelters): occupancy bar and %, available places, status chip, contact under the address. | |
 | P8-02 | Map marker | Click a marker on the map. | A popup shows the shelter name and details, with an **Allocate** button for open shelters. | |
 | P8-03 | Filters | Search `college`. Then clear it and set District **Kalutara**. Then set Status **Full**. Then try a search with no match. | `college` shows the 2 colleges. Kalutara shows 3 shelters and the map re-fits to them. Full shows only Kuruwita Temple Community Hall. No match shows "No shelters match these filters". | |
 | P8-04 | Register validation | Click "Register shelter" and then "Register shelter" in the dialog with everything empty. | "Shelter name must be at least 3 characters.", "Select a district.", "Enter the shelter address.", "Enter the shelter capacity." and a location error. | |
-| P8-05 | Register a shelter | Fill in: name `Test Shelter <your initials>`, district Ratnapura, an address, capacity `50`, occupancy `0`. Click the map to place it, **or** type latitude `6.69` and longitude `80.40`. Add an optional contact name and phone `0451234567`. Save. | Toast: "Test Shelter … was registered." It appears in the table and on the map as **Available**, with 50 available. | |
+| P8-05 | Register a shelter | Fill in: name `Test Shelter <your initials>`, district Ratnapura, an address, capacity `50`, occupancy `0`. Click the map to place it, **or** type latitude `6.69` and longitude `80.40`. Add an optional contact name and phone `0451234567`. Save. | When you place the point, the District fills in by itself ("District set to Ratnapura from the location."). Toast: "Test Shelter … was registered." It appears in the table and on the map as **Available**, with 50 available. | |
 | P8-06 | Number rules | Register another shelter: first capacity `0`, then `10.5`, then capacity `50` with occupancy `60`, then capacity `50` with occupancy `45`. | "Capacity must be at least 1.", "Capacity must be a whole number." and "Occupancy cannot exceed capacity." The last one saves as **Nearly Full** (90%). | |
 | P8-07 | Duplicate-name warning | Register a shelter named `ratnapura central college` (lower case) in district Ratnapura. | Yellow warning: "A shelter named “Ratnapura Central College” is already registered in Ratnapura. Check that this is not the same shelter." Saving is **still allowed**, because it's only a warning. Change the district to Kalutara and the warning disappears. | |
 | P8-08 | Phone validation | Enter contact phone `12345`. | "Enter a valid phone number, e.g. 0771234567 or +94771234567." | |
@@ -359,6 +361,9 @@ Web dashboard, signed in as the **District Officer**. The expected numbers assum
 | P8-22 | No event in district | Allocate on **Horana Community Centre** (Kalutara). | The event list only has "Not linked to an event", because Kalutara has no active event. Allocation still works. | |
 | P8-23 | Two officers at once | Register a test shelter with **capacity 10**. Open Shelters in two windows (a normal window and an Incognito window, both signed in as the District Officer). Open Allocate on that shelter in both and enter `6` in each. Click Confirm in window A, then window B. | **Only one** allocation succeeds. Window B either disables Confirm and shows "Insufficient capacity…" (it updates live), or shows "The selected shelter does not have enough available places." Final occupancy is **6**, never 12. | |
 | P8-24 | Overview follows | Open Overview after your allocations. | "Available shelter places" and the shelter summary match the Shelters page. | |
+| P8-25 | District from a map click | Open "Register shelter". Click the map in one district, then drag the pin into a different district (zoom in near a border, e.g. Kalutara and Ratnapura). | Each time, "Detecting the district from the location…" shows, then the **District** changes and "District set to *name* from the location." appears. | |
+| P8-26 | District from typed coordinates | Type latitude `7.2906` and longitude `80.6337`, then click outside the field. | The pin moves to Kandy and the District becomes **Kandy**. | |
+| P8-27 | Outside Sri Lanka or at sea | Type latitude `13.08` and longitude `80.27` (Chennai). Then click the map in the sea off the coast. | Chennai: "This location is outside Sri Lanka. Check the coordinates." The sea: "The district could not be detected. Choose it from the list." The district you chose before is kept. | |
 
 ---
 
@@ -438,11 +443,8 @@ These can't be tested in Expo Go. They will be tested once the installable devel
 
 | ID | Feature |
 | --- | --- |
-| D-01 | "Choose on map": tap to place the pin, drag it, "Use this location", and the district detected from the chosen point (P5-17) |
-| D-02 | The Location map on the mobile Report details screen |
-| D-03 | The "This location is outside Sri Lanka. Check it before submitting." warning when a point outside Sri Lanka is picked on the map |
-| D-04 | Queued offline reports surviving a full app restart while offline. Expo Go can't reopen without the laptop. |
-| D-05 | Installing and opening the app without Expo Go: app name, icon and splash screen |
+| D-01 | Queued offline reports surviving a full app restart while offline. Expo Go can't reopen without the laptop. |
+| D-02 | Installing and opening the app without Expo Go: app name, icon and splash screen |
 
 ---
 
@@ -473,9 +475,9 @@ Copy this for each problem you find:
 | Phase | Total tests | Pass | Fail | Blocked | Deferred | Tester | Date |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 4 — Sign-in and shells | 26 | | | | | | |
-| 5 — Online report (UC01) | 17 | | | | 1 | | |
+| 5 — Online report (UC01) | 20 | | | | | | |
 | 6 — Offline and sync | 14 | | | | | | |
 | 7 — Verification (UC02) | 20 | | | | | | |
-| 8 — Shelters (UC03) | 24 | | | | | | |
+| 8 — Shelters (UC03) | 27 | | | | | | |
 | 9 — Analytics (UC04) | 20 | | | | | | |
 | End-to-end | 7 steps | | | | | | |

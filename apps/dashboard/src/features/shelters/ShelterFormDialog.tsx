@@ -2,9 +2,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
   DISTRICTS,
   findDuplicateShelterName,
+  isWithinSriLanka,
+  lookupDistrict,
   shelterInputSchema,
   toErrorMessage,
   type EmergencyShelter,
+  type GeoPoint,
   type ShelterInput,
 } from '@lankashield/shared';
 import Alert from '@mui/material/Alert';
@@ -20,7 +23,7 @@ import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 
 import { PointMap } from '../../components/maps/PointMap';
@@ -45,7 +48,13 @@ export function ShelterFormDialog({
   const [closed, setClosed] = useState(shelter?.status === 'CLOSED');
   const [error, setError] = useState<string | null>(null);
 
-  const { control, handleSubmit, formState } = useForm<ShelterInput>({
+  const [districtNote, setDistrictNote] = useState<{
+    severity: 'info' | 'success' | 'warning';
+    text: string;
+  } | null>(null);
+  const lookupSeq = useRef(0);
+
+  const { control, handleSubmit, formState, setValue } = useForm<ShelterInput>({
     resolver: zodResolver(shelterInputSchema),
     defaultValues: shelter
       ? {
@@ -65,6 +74,33 @@ export function ShelterFormDialog({
     name && district
       ? findDuplicateShelterName(name, district, shelters, shelter?.shelterId)
       : undefined;
+
+  /** Fills the district from a point placed on the map or typed in (OpenStreetMap Nominatim). */
+  const detectDistrict = async (point: GeoPoint) => {
+    const seq = ++lookupSeq.current;
+    if (!isWithinSriLanka(point)) {
+      setDistrictNote({
+        severity: 'warning',
+        text: 'This location is outside Sri Lanka. Check the coordinates.',
+      });
+      return;
+    }
+    setDistrictNote({ severity: 'info', text: 'Detecting the district from the location…' });
+    const detected = await lookupDistrict(point);
+    if (seq !== lookupSeq.current) return; // a newer point was chosen meanwhile
+    if (detected) {
+      setValue('district', detected, { shouldDirty: true, shouldValidate: formState.isSubmitted });
+      setDistrictNote({
+        severity: 'success',
+        text: `District set to ${detected} from the location.`,
+      });
+    } else {
+      setDistrictNote({
+        severity: 'warning',
+        text: 'The district could not be detected. Choose it from the list.',
+      });
+    }
+  };
 
   const onSubmit = handleSubmit(async (input) => {
     setError(null);
@@ -212,50 +248,69 @@ export function ShelterFormDialog({
           <Controller
             control={control}
             name="location"
-            render={({ field, fieldState }) => (
-              <Box>
-                <Typography variant="subtitle2" gutterBottom>
-                  Location
-                </Typography>
-                <Typography variant="body2" color="textSecondary" gutterBottom>
-                  Click the map to place the shelter, or enter the coordinates.
-                </Typography>
-                <PointMap point={field.value} onPick={field.onChange} height={260} zoom={13} />
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1.5 }}>
-                  <TextField
-                    size="small"
-                    label="Latitude"
-                    type="number"
-                    value={field.value?.latitude ?? ''}
-                    onChange={(e) =>
-                      field.onChange({
-                        latitude: Number(e.target.value),
-                        longitude: field.value?.longitude ?? 0,
-                      })
-                    }
-                    disabled={busy}
-                  />
-                  <TextField
-                    size="small"
-                    label="Longitude"
-                    type="number"
-                    value={field.value?.longitude ?? ''}
-                    onChange={(e) =>
-                      field.onChange({
-                        latitude: field.value?.latitude ?? 0,
-                        longitude: Number(e.target.value),
-                      })
-                    }
-                    disabled={busy}
-                  />
-                </Box>
-                {fieldState.error ? (
-                  <Typography variant="caption" color="error">
-                    {fieldState.error.message ?? 'Select the shelter location.'}
+            render={({ field, fieldState }) => {
+              const pick = (point: GeoPoint) => {
+                field.onChange(point);
+                void detectDistrict(point);
+              };
+              // Typed coordinates: detect once both are filled in and the field loses focus.
+              const detectTyped = () => {
+                const p = field.value;
+                if (p && p.latitude !== 0 && p.longitude !== 0) void detectDistrict(p);
+              };
+              return (
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Location
                   </Typography>
-                ) : null}
-              </Box>
-            )}
+                  <Typography variant="body2" color="textSecondary" gutterBottom>
+                    Click the map or drag the pin to place the shelter, or enter the coordinates.
+                    The district is filled in from the location.
+                  </Typography>
+                  <PointMap point={field.value} onPick={pick} height={260} zoom={13} />
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1.5 }}>
+                    <TextField
+                      size="small"
+                      label="Latitude"
+                      type="number"
+                      value={field.value?.latitude ?? ''}
+                      onChange={(e) =>
+                        field.onChange({
+                          latitude: Number(e.target.value),
+                          longitude: field.value?.longitude ?? 0,
+                        })
+                      }
+                      onBlur={detectTyped}
+                      disabled={busy}
+                    />
+                    <TextField
+                      size="small"
+                      label="Longitude"
+                      type="number"
+                      value={field.value?.longitude ?? ''}
+                      onChange={(e) =>
+                        field.onChange({
+                          latitude: field.value?.latitude ?? 0,
+                          longitude: Number(e.target.value),
+                        })
+                      }
+                      onBlur={detectTyped}
+                      disabled={busy}
+                    />
+                  </Box>
+                  {districtNote ? (
+                    <Alert severity={districtNote.severity} sx={{ mt: 1.5, py: 0 }}>
+                      {districtNote.text}
+                    </Alert>
+                  ) : null}
+                  {fieldState.error ? (
+                    <Typography variant="caption" color="error">
+                      {fieldState.error.message ?? 'Select the shelter location.'}
+                    </Typography>
+                  ) : null}
+                </Box>
+              );
+            }}
           />
 
           <FormControlLabel

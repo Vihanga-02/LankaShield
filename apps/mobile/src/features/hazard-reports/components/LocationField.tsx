@@ -9,7 +9,7 @@ import {
   type GeoPoint,
 } from '@lankashield/shared';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ActivityIndicator, Button, Text } from 'react-native-paper';
 
@@ -34,27 +34,44 @@ export function LocationField({
 }) {
   const [locating, setLocating] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [districtNote, setDistrictNote] = useState<string | null>(null);
   const openPicker = useLocationPickerStore((s) => s.open);
+  // Each GPS fix or map pick gets a number, so a slow lookup cannot overwrite a newer point.
+  const lookupSeq = useRef(0);
+
+  const applyDistrict = (point: GeoPoint, district: District | undefined) => {
+    if (district) onDistrictDetected(district);
+    else if (isWithinSriLanka(point)) {
+      setDistrictNote('The district could not be detected from this location. Choose it below.');
+    }
+  };
 
   const locateWithGps = async () => {
+    const seq = ++lookupSeq.current;
     setLocating(true);
     setMessage(null);
+    setDistrictNote(null);
     const result = await getCurrentLocation();
+    if (seq !== lookupSeq.current) return;
     setLocating(false);
     if (!result.ok) {
       setMessage(result.message);
       return;
     }
     onChange(result.location);
-    if (result.district) onDistrictDetected(result.district);
+    applyDistrict(result.location, result.district);
   };
 
   const applyMapPoint = async (point: GeoPoint) => {
+    const seq = ++lookupSeq.current;
+    setLocating(false);
     setMessage(null);
+    setDistrictNote(null);
     onChange({ ...point, source: 'MANUAL' });
     const { address, district } = await describeLocation(point);
+    if (seq !== lookupSeq.current) return;
     if (address) onChange({ ...point, address, source: 'MANUAL' });
-    if (district) onDistrictDetected(district);
+    applyDistrict(point, district);
   };
 
   return (
@@ -94,6 +111,11 @@ export function LocationField({
       {message ? (
         <Text variant="bodySmall" style={styles.error} accessibilityLiveRegion="polite">
           {message}
+        </Text>
+      ) : null}
+      {districtNote ? (
+        <Text variant="bodySmall" style={styles.warning} accessibilityLiveRegion="polite">
+          {districtNote}
         </Text>
       ) : null}
 
