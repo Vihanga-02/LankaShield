@@ -115,8 +115,10 @@ export function ShelterFormDialog({
 
   return (
     <Dialog open onClose={busy ? undefined : onClose} maxWidth="md" fullWidth>
-      <DialogTitle>{editing ? `Edit ${shelter.name}` : 'Register shelter'}</DialogTitle>
-      <DialogContent dividers>
+      <DialogTitle sx={{ py: 1 }}>
+        {editing ? `Edit ${shelter.name}` : 'Register shelter'}
+      </DialogTitle>
+      <DialogContent dividers sx={{ py: 1 }}>
         <Stack component="form" id="shelter-form" spacing={2} noValidate onSubmit={onSubmit}>
           {error ? <Alert severity="error">{error}</Alert> : null}
           {duplicate ? (
@@ -133,13 +135,14 @@ export function ShelterFormDialog({
               gap: 3,
               alignItems: 'start',
             }}>
-            <Stack spacing={2}>
+            <Stack spacing={1}>
               <Controller
                 control={control}
                 name="name"
                 render={({ field, fieldState }) => (
                   <TextField
                     {...field}
+                    size="small"
                     label="Shelter name"
                     error={!!fieldState.error}
                     helperText={fieldState.error?.message}
@@ -153,6 +156,7 @@ export function ShelterFormDialog({
                 render={({ field, fieldState }) => (
                   <TextField
                     select
+                    size="small"
                     label="District"
                     value={field.value ?? ''}
                     onChange={(e) => {
@@ -180,6 +184,7 @@ export function ShelterFormDialog({
                 render={({ field, fieldState }) => (
                   <TextField
                     {...field}
+                    size="small"
                     label="Address"
                     error={!!fieldState.error}
                     helperText={fieldState.error?.message}
@@ -193,6 +198,7 @@ export function ShelterFormDialog({
                 name="capacity"
                 render={({ field, fieldState }) => (
                   <TextField
+                    size="small"
                     label="Capacity (people)"
                     type="number"
                     value={field.value ?? ''}
@@ -209,6 +215,7 @@ export function ShelterFormDialog({
                 name="currentOccupancy"
                 render={({ field, fieldState }) => (
                   <TextField
+                    size="small"
                     label="Current occupancy"
                     type="number"
                     value={field.value ?? ''}
@@ -232,7 +239,12 @@ export function ShelterFormDialog({
                 control={control}
                 name="contactName"
                 render={({ field }) => (
-                  <TextField {...field} label="Contact name (optional)" disabled={busy} />
+                  <TextField
+                    {...field}
+                    size="small"
+                    label="Contact name (optional)"
+                    disabled={busy}
+                  />
                 )}
               />
               <Controller
@@ -241,6 +253,7 @@ export function ShelterFormDialog({
                 render={({ field, fieldState }) => (
                   <TextField
                     {...field}
+                    size="small"
                     label="Contact phone (optional)"
                     error={!!fieldState.error}
                     helperText={fieldState.error?.message}
@@ -280,7 +293,7 @@ export function ShelterFormDialog({
                     <PointMap
                       point={field.value}
                       onPick={busy ? undefined : syncLocationDetails}
-                      height={260}
+                      height={330}
                       zoom={13}
                     />
                     <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1.5 }}>
