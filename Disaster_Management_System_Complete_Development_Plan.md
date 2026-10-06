@@ -24,7 +24,8 @@
 | Phase 7 — UC02 verification | ✅ Done — queue (search, filters, pagination), review screen, transactional decision; second decision blocked (checked against Firebase) |
 | Phase 8 — UC03 shelter management | ✅ Done — list, map, register/edit, transactional allocation with alternatives; concurrent over-allocation refused (checked against Firebase) |
 | Phase 9 — UC04 analytics and reporting | ✅ Done — event selection, filters, metrics, 4 charts, provisional/final, save, PDF export, mocked donor share; 81 unit tests pass |
-| Development build (D18) | ⏳ Next — EAS Android development build; test mobile maps (D33) |
+| OpenStreetMap maps (D42) | ✅ Done — Google Maps replaced on web (Leaflet) and mobile (Leaflet in a WebView, works in Expo Go); district filled in from a map point; 88 unit tests pass |
+| Development build (D18) | ⏳ Next — EAS Android development build and APK (no Maps key needed any more) |
 | Phases 10–12 | Not started |
 
 ### 0.2 Decisions made during implementation
@@ -50,7 +51,7 @@ These decisions override anything later in this document that disagrees with the
 | D15 | **The EAS project lives in the group's Expo organisation.** When the development build is made (after Phase 9, D18), set `owner: '<organisation-slug>'` in `app.config.ts`, then run `npx eas-cli@latest init` from `apps/mobile`. It cannot edit `app.config.ts` itself, so copy the `projectId` it prints into `extra.eas.projectId`. | Every group member can build under the shared organisation. |
 | D16 | **Firestore converters live in `@lankashield/shared/firestore`**, not in each app. `converters.<collection>` turns ISO strings in timestamp fields into `Timestamp` on write, drops `undefined` fields, and turns every `Timestamp` back into an ISO string on read. The main `@lankashield/shared` entry stays free of Firebase. | One mapping used by mobile, the dashboard and the seed script. |
 | D17 | **Seed shelter occupancy comes from the active event's confirmed allocations.** Allocations for completed events are historical records. | Shelter numbers in the seed always match the allocation records. |
-| D18 | **Mobile development happens in Expo Go until Phase 9; the EAS development build is made after Phase 9.** Every mobile package used so far is in Expo Go: AsyncStorage, vector icons, and `react-native-maps`, which needs no setup in Expo Go. The own Android Maps key is only needed for the APK. | A development build takes time and isn't needed to build the features. |
+| D18 | **Mobile development happens in Expo Go until Phase 9; the EAS development build is made after Phase 9.** Every mobile package used so far is in Expo Go: AsyncStorage, vector icons, and (since D42) `react-native-webview` for the maps. | A development build takes time and isn't needed to build the features. |
 | D19 | **Mobile Home is `src/app/(tabs)/index.tsx`** (route `/`), not `home.tsx`. Routes are guarded with `Stack.Protected`: `(tabs)` when signed in, `(auth)` when signed out. | `/` must resolve to a screen for the protected-route redirect to work. |
 | D20 | **Dashboard page access by role** (`apps/dashboard/src/app/navigation.tsx`): Overview and Profile for every officer; Verification Queue and Notifications for the Duty Officer; Shelters for the District Officer; Disaster Analytics for the DMC Analyst. A citizen or volunteer account is signed out of the dashboard, and an officer account is signed out of mobile, each with a message. | Each role reaches only its intended application area (Phase 4 exit condition). |
 | D21 | **Mobile caches the signed-in profile in AsyncStorage.** A restored session still works when the app starts offline. | Needed for offline reporting in Phase 6. |
@@ -65,15 +66,16 @@ These decisions override anything later in this document that disagrees with the
 | D30 | **Queued photos are copied to `documents/offline-evidence/{reportId}/`** (expo-file-system) before the row is saved. | The image picker's cache folder can be cleared by Android before the sync runs. |
 | D31 | **Sync runs on sign-in, on reconnect (expo-network listener), on returning to the foreground, and from "Sync now"/"Retry".** Only one sync runs at a time. A FAILED report can be discarded by the user. On sign-out the queue stays in SQLite (with a warning) and syncs when its owner signs in again. | Matches §13.2 and avoids double uploads from overlapping triggers. |
 | D32 | **Map pickers are full-screen routes (`/location-picker`), never React Native `Modal`s.** The chosen point is handed back through a small Zustand store (`locationPickerStore`). | Keeps the map in the app's own screen stack; a `Modal` is a separate Android window. |
-| D33 | **Known limitation: Google Maps renders black in Expo Go on Android (SDK 57)** — Expo bug [expo/expo#49323](https://github.com/expo/expo/issues/49323), same as [react-native-maps#5888](https://github.com/react-native-maps/react-native-maps/issues/5888). Google rejects Expo Go's built-in key; our own key is not used in Expo Go. GPS location, submission and sync are unaffected. "Choose on map" and the report-details map are tested on the development build after Phase 9. | Fixing it needs our own key in a development build, which is already scheduled (D18). |
+| D33 | **Superseded by D42.** ~~Known limitation: Google Maps renders black in Expo Go on Android (SDK 57)~~ — Expo bug [expo/expo#49323](https://github.com/expo/expo/issues/49323), same as [react-native-maps#5888](https://github.com/react-native-maps/react-native-maps/issues/5888). Google rejects Expo Go's built-in key; our own key is not used in Expo Go. GPS location, submission and sync are unaffected. "Choose on map" and the report-details map are tested on the development build after Phase 9. | Fixing it needs our own key in a development build, which is already scheduled (D18). |
 | D34 | **The verification decision is a Firestore transaction, not a plain batch.** The report is read inside the transaction, `assertCanReceiveDecision` is checked, and the decision, report update (`status`, `disasterEventId`, `latestDecision`), warning request (escalation only) and reporter notification are written in the same commit. | Same writes as §10.2, but two officers deciding at the same moment cannot both succeed — the second gets ALREADY_VERIFIED. |
 | D35 | **Shelter occupancy changes only through allocations.** The edit form shows occupancy read-only. Edits run in a transaction that reads the latest occupancy and refuses a capacity below it. Closing a shelter sets CLOSED; reopening derives the status again. The duplicate-name check is a warning, not a block. | An edit can never overwrite an allocation made meanwhile. |
 | D36 | **Insufficient-capacity alternatives** are open shelters that fit the whole group: same district first, then most available places, top 5, each with "Allocate here". | Matches §12 Phase 8 and keeps the officer in one dialog. |
 | D37 | **Analytics loads each source independently** (`Promise.allSettled`). A failed source becomes a missing metric (PROVISIONAL), not a failed page. The analysis stays on screen when saving, exporting or sharing fails, and the error offers Retry without recalculating. | Plan §14 and the Phase 9 exit condition. |
 | D38 | **"Shelter occupancy" is labelled "Current shelter occupancy".** Shelters keep no occupancy history, so for a completed event it is today's figure for the event district. "Evacuees allocated" carries the event-specific count. | Avoids presenting a current figure as historical. |
 | D39 | **PDF export** builds the report in the browser with jsPDF (loaded only on export), saves the `responseReports` document first if needed, uploads the PDF to `generated-reports/{id}/report.pdf`, stores `exportedUrl`, then downloads it. **Donor sharing** is enabled only for saved FINAL reports and is recorded in `shares[]` with mocked organisation names. | Plan §10.4 and §18 UC04. |
-| D40 | **Web maps use `@vis.gl/react-google-maps`** with Google's `DEMO_MAP_ID` for Advanced Markers. When the Maps JavaScript API cannot load (no key, auth failure), every map shows a fallback with the coordinates and a Google Maps link. Shelter markers use status colours, the info window and table name the status in text, and the map fits its bounds to the visible shelters. | Phase 10 map requirements met early; the web key must allow the Maps JavaScript API for `localhost` and the Vercel domain. |
+| D40 | **Superseded by D42.** ~~Web maps use `@vis.gl/react-google-maps`~~ with Google's `DEMO_MAP_ID` for Advanced Markers. When the Maps JavaScript API cannot load (no key, auth failure), every map shows a fallback with the coordinates and a Google Maps link. Shelter markers use status colours, the info window and table name the status in text, and the map fits its bounds to the visible shelters. | Phase 10 map requirements met early; the web key must allow the Maps JavaScript API for `localhost` and the Vercel domain. |
 | D41 | **Charts follow one convention:** a single series hue (brand primary) with categories named on the axis, bars ≤ 24 px with 4 px rounded ends, a solid hairline grid, values at the bar tip, tooltips, and a Chart/Table toggle on every chart. The status colours failed a colour-blind separation check as a category palette, so they are not used to tell chart categories apart. | Readable for colour-blind users and in print; every value is also available as a table. |
+| D42 | **Maps use OpenStreetMap instead of Google Maps.** Web: `leaflet` + `react-leaflet` with the standard OSM tiles; shelter pins are coloured by status with a popup (name, occupancy, Allocate) and fit to the visible shelters; the shelter form pin can be clicked or dragged. Mobile: a Leaflet page in `react-native-webview` (`OsmMap`), which works in Expo Go; taps and pin drags come back as messages, and "My location" re-centres with GPS. **District auto-fill:** a point chosen on the map (or typed coordinates on the web) is reverse-geocoded with OSM Nominatim (`lookupDistrict` in `packages/shared`, district name then ISO code LK-xx, one request per second). On mobile the phone's geocoder runs first and Nominatim fills in a missing district. When no district is found the user is asked to choose it. No API key, Google Cloud project or billing is needed; the "© OpenStreetMap contributors" credit is always shown. | Removes the Expo Go black-map limitation (D33) and the Maps keys; OSM tile and Nominatim usage policies allow light use such as a campus prototype. For heavy production traffic, switch the tile URL to a hosted provider. |
 
 ### 0.3 Installed versions
 
@@ -90,7 +92,7 @@ Use two TypeScript front ends connected to one Firebase project:
 - **Mobile:** React Native with Expo for citizens and community volunteers.
 - **Web:** React with Vite for Duty Officers, District Officers and DMC Analysts.
 - **Backend:** Firebase Authentication, Cloud Firestore and Cloud Storage accessed directly through the Firebase client SDK.
-- **Maps:** Google Maps Platform using Maps SDK for Android and Maps JavaScript API.
+- **Maps:** OpenStreetMap — Leaflet on the web, Leaflet in a WebView on mobile; Nominatim for the district of a map point (D42).
 - **Offline mobile queue:** Expo SQLite with explicit synchronisation states.
 - **Deployment:** EAS Build for Android and Vercel for the web dashboard.
 - **Cloud Functions:** Not required for the initial implementation. Add them later only if a feature cannot be implemented clearly with client SDK operations.
@@ -102,7 +104,7 @@ This gives the group familiar React concepts on both platforms while allowing ea
 | Priority | Scope |
 |---|---|
 | P0 — required | Authentication, role routing, submit hazard report, offline queue, verification, shelter management, analytics dashboard, Firebase data, screenshots and tests |
-| P1 — important | Google Maps, evidence upload, in-app notifications, PDF export, meaningful error states and seed data |
+| P1 — important | Maps, evidence upload, in-app notifications, PDF export, meaningful error states and seed data |
 | P2 — optional polish | Advanced map styling, animation, extensive filtering, multiple export formats and sophisticated notification preferences |
 
 Do not begin P2 work until every P0 workflow can be demonstrated end to end.
@@ -169,7 +171,7 @@ flowchart TD
 - The dashboard performs verification through Firestore batch writes and shelter allocation through Firestore transactions.
 - The dashboard calculates analytics and creates PDF exports in the browser.
 - Firestore notification documents provide the required notification workflow. Real remote push can be added later.
-- Google Maps displays locations and lets users select or inspect coordinates.
+- The map (OpenStreetMap, D42) displays locations and lets users select or inspect coordinates.
 
 ---
 
@@ -190,7 +192,7 @@ flowchart TD
 | Connectivity | Expo Network |
 | GPS | Expo Location |
 | Camera/gallery | Expo Image Picker |
-| Maps | React Native Maps using Google provider |
+| Maps | OpenStreetMap via Leaflet in `react-native-webview` (D42) |
 | Notifications | Expo Notifications |
 | Date handling | date-fns |
 | Testing | Jest and React Native Testing Library |
@@ -208,7 +210,7 @@ flowchart TD
 | Server data | Firebase SDK with reusable hooks |
 | Tables | Material UI Table or Data Grid community edition |
 | Charts | Recharts |
-| Maps | Google Maps JavaScript API |
+| Maps | OpenStreetMap via `leaflet` + `react-leaflet` (D42) |
 | PDF export | jsPDF and jsPDF AutoTable |
 | Testing | Vitest and React Testing Library |
 
@@ -224,7 +226,7 @@ flowchart TD
 | Seed data | Node script using the Firebase client SDK (`npm run seed`) |
 | Web hosting | Vercel |
 | Mobile build | EAS Build |
-| Maps | Google Maps Platform |
+| Maps | OpenStreetMap tiles and Nominatim (D42) |
 
 Use the latest mutually compatible package versions. Install Expo native packages with `npx expo install` instead of manually choosing versions.
 
@@ -715,19 +717,9 @@ Add composite indexes only when Firestore reports that a query requires one. The
 
 Cloud Functions are not required.
 
-### 9.2 Google Cloud APIs to enable
+### 9.2 Map services
 
-- Maps SDK for Android.
-- Maps JavaScript API.
-- Geocoding API only if readable addresses are required.
-- Places API only if address autocomplete is implemented as a P2 feature.
-
-Create separate keys for mobile and web:
-
-- Android key restricted by application ID and signing certificate.
-- Web key restricted to localhost and the Vercel deployment domain.
-
-Set a billing budget alert in Google Cloud even though the system is only a campus prototype.
+No Google Cloud APIs or keys are needed (D42). Maps use the public OpenStreetMap tiles and the Nominatim reverse geocoder, which need no account. Follow their usage policies: show the "© OpenStreetMap contributors" credit, keep traffic light, and at most one Nominatim request per second.
 
 ### 9.3 Environment variables
 
@@ -740,7 +732,6 @@ EXPO_PUBLIC_FIREBASE_PROJECT_ID=
 EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=
 EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
 EXPO_PUBLIC_FIREBASE_APP_ID=
-EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_KEY=
 ```
 
 #### Dashboard
@@ -752,7 +743,6 @@ VITE_FIREBASE_PROJECT_ID=
 VITE_FIREBASE_STORAGE_BUCKET=
 VITE_FIREBASE_MESSAGING_SENDER_ID=
 VITE_FIREBASE_APP_ID=
-VITE_GOOGLE_MAPS_WEB_KEY=
 ```
 
 Both apps use the same Firebase **Web app** config values; only the prefix differs. Copy each `.env.example` to `.env` in the same folder. Commit `.env.example`, not the real `.env` files (`.gitignore` already excludes them). Never commit a Firebase service-account JSON file.
@@ -893,7 +883,7 @@ Map every code to a clear user message and recovery action.
 | Register | Name, email, phone, password and role selection between Citizen/Volunteer |
 | Home | Active warnings summary, report shortcut and recent report status |
 | Submit report | Hazard type, severity, description, location, evidence and submit action |
-| Location selection | Current GPS location, Google Map pin and manual selection |
+| Location selection | Current GPS location, map pin and manual selection |
 | Submission result | Tracking ID and Pending Verification/Pending Sync state |
 | My reports | Status cards with filters and last update |
 | Report details | Evidence, location, verification status and officer remarks |
@@ -907,7 +897,7 @@ Map every code to a clear user message and recovery action.
 | Officer login | Email/password and validation |
 | Overview | KPI cards, recent reports, shelter summary and event summary |
 | Verification queue | Search, status/severity filters, table and pagination |
-| Report review | Evidence, Google Map, reporter data, duplicate indicator and decision form with optional disaster-event selection |
+| Report review | Evidence, map, reporter data, duplicate indicator and decision form with optional disaster-event selection |
 | Shelter list | Capacity, occupancy, available places, status and actions |
 | Register/edit shelter | Details, capacity, location and duplicate-name warning |
 | Shelter allocation | Requested count, capacity result, alternative shelter and confirmation |
@@ -1095,7 +1085,7 @@ CREATE TABLE offline_reports (
 
 - Shelter list with district and status filters.
 - Register/edit shelter form.
-- Google Map location selection.
+- Map location selection (district filled in from the point, D42).
 - Capacity, occupancy and available-capacity display.
 - Requested evacuee count field.
 - Firestore client transaction for capacity check, allocation creation and occupancy update.
@@ -1138,11 +1128,13 @@ CREATE TABLE offline_reports (
 
 **Maps**
 
-- Mobile GPS marker and draggable/manual marker.
-- Web report-location map.
-- Shelter markers with status colours.
-- Fit bounds when showing multiple shelters.
-- Graceful message if Maps API cannot load.
+Done early with OpenStreetMap (D42):
+
+- ✅ Mobile GPS marker and draggable/manual marker.
+- ✅ Web report-location map.
+- ✅ Shelter markers with status colours.
+- ✅ Fit bounds when showing multiple shelters.
+- ✅ Graceful message if the map cannot load.
 
 **Notifications**
 
@@ -1208,9 +1200,7 @@ Aim for meaningful coverage of core business logic rather than artificially test
 
 **Mobile**
 
-- Create the Android development build after Phase 9 (D18, D15): set `owner` and `extra.eas.projectId`, add `EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_KEY` to `android.config.googleMaps.apiKey` in `app.config.ts`, then run `npx eas-cli@latest build --profile development --platform android`. Rebuild it whenever a native package is added.
-- Restrict the Android Maps key to package `lk.lankashield.mobile` and the SHA-1 shown by `npx eas-cli@latest credentials`, with Maps SDK for Android enabled.
-- On the development build, test the maps that are black in Expo Go (D33): "Choose on map" (tap, drag, confirm, address and district filled in) and the location map in report details.
+- Create the Android development build after Phase 9 (D18, D15): set `owner` and `extra.eas.projectId`, then run `npx eas-cli@latest build --profile development --platform android`. Rebuild it whenever a native package is added. No Maps key is needed (D42).
 - Produce the final Android APK using EAS Build (a `preview` profile with `"buildType": "apk"`).
 - Test on at least one physical Android device.
 
@@ -1442,7 +1432,7 @@ Run every `npm install` from the repository root so there is one `package-lock.j
 - [ ] Four revised use cases work end to end.
 - [ ] Mobile and web use the same data and statuses.
 - [ ] Offline reporting is demonstrable.
-- [ ] Maps load with valid keys (mobile on the development build/APK, not Expo Go — D33).
+- [ ] OpenStreetMap maps load on web and mobile, with the OpenStreetMap credit shown (D42).
 - [ ] Verification results appear in the mobile in-app notification list.
 - [ ] PDF export produces a readable report.
 
@@ -1504,5 +1494,6 @@ Once this works, extend it with offline synchronisation, verification outcomes, 
 - Expo monorepos: <https://docs.expo.dev/guides/monorepos/>
 - Cloud Storage for Firebase Blaze requirement: <https://firebase.google.com/docs/storage/faqs-storage-changes-announced-sept-2024>
 - Vite on Vercel: <https://vercel.com/docs/frameworks/frontend/vite>
-- Maps SDK for Android: <https://developers.google.com/maps/documentation/android-sdk/start>
-- Maps JavaScript API setup: <https://developers.google.com/maps/documentation/javascript/get-api-key>
+- OpenStreetMap tile usage policy: <https://operations.osmfoundation.org/policies/tiles/>
+- Nominatim usage policy: <https://operations.osmfoundation.org/policies/nominatim/>
+- Leaflet: <https://leafletjs.com/> · React Leaflet: <https://react-leaflet.js.org/>

@@ -11,12 +11,12 @@ import {
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Divider, List, Text } from 'react-native-paper';
 
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
+import { OsmMap } from '@/components/maps/OsmMap';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useHazardReport } from '@/features/hazard-reports/hooks/useHazardReport';
@@ -35,7 +35,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function ReportDetails({ report }: { report: HazardReport }) {
   const decision = report.latestDecision;
-  const region = { ...report.location, latitudeDelta: 0.02, longitudeDelta: 0.02 };
 
   return (
     <>
@@ -76,17 +75,10 @@ function ReportDetails({ report }: { report: HazardReport }) {
       </Section>
 
       <Section title="Location">
-        <MapView
-          style={styles.map}
-          provider={PROVIDER_GOOGLE}
-          initialRegion={region}
-          liteMode
-          scrollEnabled={false}
-          zoomEnabled={false}
-          pitchEnabled={false}
-          rotateEnabled={false}>
-          <Marker coordinate={report.location} pinColor={colors.primary} />
-        </MapView>
+        {/* A fixed preview: touches pass through so the screen keeps scrolling. */}
+        <View style={styles.map} pointerEvents="none">
+          <OsmMap point={report.location} zoom={15} style={styles.mapFill} />
+        </View>
         <Text variant="bodySmall" style={styles.muted}>
           {report.location.address ??
             `${report.location.latitude.toFixed(5)}, ${report.location.longitude.toFixed(5)}`}{' '}
@@ -163,7 +155,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   sectionTitle: { marginBottom: spacing.xs },
-  map: { height: 180, borderRadius: radius.input },
+  map: { height: 180, borderRadius: radius.input, overflow: 'hidden' },
+  mapFill: { flex: 1 },
   photos: { gap: spacing.sm },
   photo: {
     width: 160,
