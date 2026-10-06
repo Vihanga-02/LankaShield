@@ -24,7 +24,7 @@ import { Controller, useForm, useWatch } from 'react-hook-form';
 
 import { useAuthStore } from '../../store/authStore';
 import { formatDate } from '../../utils/format';
-import { submitVerificationDecision } from './verification.service';
+import { submitVerificationDecision } from '../../services/verification';
 
 /** UC02 decision form: verify, reject (remarks required) or escalate; optional event link (D6). */
 export function DecisionForm({ reportId, events }: { reportId: string; events: DisasterEvent[] }) {

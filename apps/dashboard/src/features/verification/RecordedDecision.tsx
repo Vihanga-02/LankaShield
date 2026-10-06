@@ -26,7 +26,7 @@ import {
   recordWarningDeliveryResult,
   subscribeToDecision,
   subscribeToWarnings,
-} from './verification.service';
+} from '../../services/verification';
 
 function OfficerName({ officerId }: { officerId: string }) {
   const load = useCallback(() => loadOfficerName(officerId), [officerId]);

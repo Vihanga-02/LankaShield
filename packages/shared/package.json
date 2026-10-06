@@ -7,7 +7,9 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./firestore": "./src/firestore/index.ts"
+    "./firestore": "./src/firestore/index.ts",
+    "./verification": "./src/rules/verification.service.ts",
+    "./verification-react": "./src/rules/useVerificationQueue.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -17,7 +19,8 @@
     "zod": "^4.6.5"
   },
   "peerDependencies": {
-    "firebase": "^12.19.0"
+    "firebase": "^12.19.0",
+    "react": "^19.2.3"
   },
   "devDependencies": {
     "firebase": "^12.19.0",

@@ -26,13 +26,11 @@ const mockFirestore = vi.hoisted(() => ({
 }));
 
 vi.mock('firebase/firestore', () => mockFirestore);
-vi.mock('../../services/firebase', () => ({ db: {} }));
 
-import {
-  recordWarningDeliveryResult,
-  submitVerificationDecision,
-  subscribeToReportsByStatus,
-} from './verification.service';
+import type { Firestore } from 'firebase/firestore';
+import { createVerificationService } from './verification.service';
+const { recordWarningDeliveryResult, submitVerificationDecision, subscribeToReportsByStatus } =
+  createVerificationService({} as Firestore);
 
 const officer = {
   uid: 'officer-123',
@@ -54,9 +52,11 @@ const sampleReport = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockFirestore.runTransaction.mockImplementation(async (_db: unknown, cb: (tx: typeof mockTx) => unknown) => {
-    return cb(mockTx);
-  });
+  mockFirestore.runTransaction.mockImplementation(
+    async (_db: unknown, cb: (tx: typeof mockTx) => unknown) => {
+      return cb(mockTx);
+    },
+  );
 });
 
 describe('submitVerificationDecision', () => {
@@ -199,11 +199,12 @@ describe('submitVerificationDecision', () => {
 describe('subscribeToReportsByStatus', () => {
   it('queries all reports when status is ALL', () => {
     subscribeToReportsByStatus('ALL', vi.fn(), vi.fn());
-    expect(mockFirestore.where).toHaveBeenCalledWith(
-      'status',
-      'in',
-      ['PENDING_VERIFICATION', 'VERIFIED', 'REJECTED', 'ESCALATED'],
-    );
+    expect(mockFirestore.where).toHaveBeenCalledWith('status', 'in', [
+      'PENDING_VERIFICATION',
+      'VERIFIED',
+      'REJECTED',
+      'ESCALATED',
+    ]);
   });
 
   it('queries verified reports including escalated when status is VERIFIED', () => {

@@ -37,8 +37,11 @@ import { ErrorState } from '../components/feedback/ErrorState';
 import { LoadingState } from '../components/feedback/LoadingState';
 import { StatusChip } from '../components/feedback/StatusChip';
 import { PageHeader } from '../components/layout/PageHeader';
-import { useVerificationQueue } from '../features/verification/useVerificationQueue';
-import type { VerificationQueueStatusFilter } from '../features/verification/verification.service';
+import { useVerificationQueue } from '@lankashield/shared/verification-react';
+import {
+  subscribeToReportsByStatus,
+  type VerificationQueueStatusFilter,
+} from '../services/verification';
 import { formatDateTime, formatRelative } from '../utils/format';
 
 const SEVERITY_COLOR = {
@@ -155,7 +158,7 @@ function QueueTable({ reports }: { reports: HazardReport[] }) {
 /** UC02 verification queue: live list with search, filters and pagination. */
 export default function VerificationQueuePage() {
   const [status, setStatus] = useState<VerificationQueueStatusFilter>('PENDING_VERIFICATION');
-  const { state, retry } = useVerificationQueue(status);
+  const { state, retry } = useVerificationQueue(subscribeToReportsByStatus, status);
   const [filters, setFilters] = useState<Filters>({
     search: '',
     hazardType: '',
