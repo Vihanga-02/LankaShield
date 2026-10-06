@@ -7,3 +7,4 @@ export * from './location';
 export * from './offlineSync';
 export * from './duplicates';
 export * from './analyticsCharts';
+export * from './stakeholders';

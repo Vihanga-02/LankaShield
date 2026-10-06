@@ -14,20 +14,30 @@ export type Subscribe<T> = (
  */
 export function useLive<T>(subscribe: Subscribe<T> | null) {
   const [attempt, setAttempt] = useState(0);
-  const [state, setState] = useState<AsyncState<T>>({ status: 'loading' });
+  const [snapshot, setSnapshot] = useState<{ source: Subscribe<T> | null; state: AsyncState<T> }>({
+    source: null,
+    state: { status: 'loading' },
+  });
 
   useEffect(() => {
     if (!subscribe) return;
-    return subscribe(
-      (data) => setState({ status: 'success', data }),
-      (error) => setState({ status: 'error', error }),
+    let active = true;
+    const unsubscribe = subscribe(
+      (data) => active && setSnapshot({ source: subscribe, state: { status: 'success', data } }),
+      (error) => active && setSnapshot({ source: subscribe, state: { status: 'error', error } }),
     );
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, [subscribe, attempt]);
 
   const retry = useCallback(() => {
-    setState({ status: 'loading' });
+    setSnapshot({ source: null, state: { status: 'loading' } });
     setAttempt((n) => n + 1);
   }, []);
 
+  const state: AsyncState<T> =
+    snapshot.source === subscribe ? snapshot.state : { status: 'loading' };
   return { state, retry };
 }

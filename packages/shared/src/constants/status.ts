@@ -13,7 +13,7 @@ export const HAZARD_REPORT_STATUS_PRESENTATION: Record<HazardReportStatus, Statu
   PENDING_VERIFICATION: { label: 'Pending Verification', color: 'warning' },
   VERIFIED: { label: 'Verified', color: 'success' },
   REJECTED: { label: 'Rejected', color: 'danger' },
-  ESCALATED: { label: 'Escalated', color: 'coralAccent' },
+  ESCALATED: { label: 'Verified', color: 'success' },
 };
 
 export const SYNC_STATUS_PRESENTATION: Record<SyncStatus, StatusPresentation> = {

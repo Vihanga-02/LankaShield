@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { stakeholderNotificationInputSchema } from './stakeholderNotification.schema';
 import { VERIFICATION_OUTCOMES } from '../enums';
 import { remarksRequired } from '../rules/verification';
 
@@ -12,10 +13,15 @@ export const verificationDecisionInputSchema = z
     remarks: z.string().trim().max(500, { error: 'Remarks must be 500 characters or fewer.' }),
     /** Empty string or undefined means "no event". */
     disasterEventId: z.string().optional(),
+    stakeholderNotification: stakeholderNotificationInputSchema.optional(),
   })
   .refine((v) => !remarksRequired(v.outcome) || v.remarks.length >= MIN_REQUIRED_REMARKS, {
     error: `Explain why the report is rejected (at least ${MIN_REQUIRED_REMARKS} characters).`,
     path: ['remarks'],
+  })
+  .refine((v) => v.outcome !== 'VERIFIED_ESCALATED' || !!v.stakeholderNotification, {
+    error: 'Select stakeholders and enter a notification.',
+    path: ['stakeholderNotification'],
   });
 
 export type VerificationDecisionInput = z.infer<typeof verificationDecisionInputSchema>;

@@ -9,6 +9,7 @@ import {
 
 import type {
   AppUser,
+  StakeholderNotification,
   DisasterEvent,
   DisasterResponseReport,
   EmergencyShelter,
@@ -32,6 +33,7 @@ export const TIMESTAMP_FIELDS: ReadonlySet<string> = new Set([
   'endedAt',
   'generatedAt',
   'sharedAt',
+  'lastAttemptAt',
 ]);
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -84,6 +86,7 @@ export function createConverter<T>(): FirestoreDataConverter<T, DocumentData> {
 /** One converter per collection, keyed like `COLLECTIONS`. */
 export const converters = {
   users: createConverter<AppUser>(),
+  stakeholderNotifications: createConverter<StakeholderNotification>(),
   hazardReports: createConverter<HazardReport>(),
   verificationDecisions: createConverter<VerificationDecision>(),
   warningRequests: createConverter<WarningRequest>(),

@@ -9,13 +9,13 @@ export type AsyncState<T> =
  */
 export function useAsync<T>(load: () => Promise<T>) {
   const [attempt, setAttempt] = useState(0);
-  const [state, setState] = useState<AsyncState<T>>({ status: 'loading' });
+  const [snapshot, setSnapshot] = useState<{ source: typeof load | null; state: AsyncState<T> }>({ source: null, state: { status: 'loading' } });
 
   useEffect(() => {
     let active = true;
-    load().then(
-      (data) => active && setState({ status: 'success', data }),
-      (error: unknown) => active && setState({ status: 'error', error }),
+    Promise.resolve().then(load).then(
+      (data) => active && setSnapshot({ source: load, state: { status: 'success', data } }),
+      (error: unknown) => active && setSnapshot({ source: load, state: { status: 'error', error } }),
     );
     return () => {
       active = false;
@@ -23,9 +23,10 @@ export function useAsync<T>(load: () => Promise<T>) {
   }, [load, attempt]);
 
   const retry = useCallback(() => {
-    setState({ status: 'loading' });
+    setSnapshot({ source: null, state: { status: 'loading' } });
     setAttempt((n) => n + 1);
   }, []);
 
+  const state: AsyncState<T> = snapshot.source === load ? snapshot.state : { status: 'loading' };
   return { state, retry };
 }

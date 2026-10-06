@@ -1,3 +1,4 @@
+import { RouteErrorPage } from '../pages/RouteErrorPage';
 import { createBrowserRouter } from 'react-router';
 
 import { AppLayout } from '../components/layout/AppLayout';
@@ -12,7 +13,7 @@ const page = (load: () => Promise<{ default: React.ComponentType }>) => async ()
 
 const guarded = (path: string, load: () => Promise<{ default: React.ComponentType }>) => ({
   element: <RequireRole roles={rolesFor(path)} />,
-  children: [{ path, lazy: page(load) }],
+  children: [{ path, lazy: page(load), errorElement: <RouteErrorPage /> }],
 });
 
 export const router = createBrowserRouter([

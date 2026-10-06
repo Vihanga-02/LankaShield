@@ -42,7 +42,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     path: '/notifications',
     label: 'Notifications',
     icon: <NotificationsOutlined />,
-    roles: ['DUTY_OFFICER'],
+    roles: ALL,
   },
   { path: '/profile', label: 'Profile', icon: <AccountCircleOutlined />, roles: ALL },
 ];

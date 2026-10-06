@@ -13,3 +13,8 @@ export function isMobileRole(role: UserRole): role is MobileRole {
 export function isDashboardRole(role: UserRole): role is DashboardRole {
   return (DASHBOARD_ROLES as readonly UserRole[]).includes(role);
 }
+
+/** Shared sender policy for forms, background retries, and persisted delivery operations. */
+export function canSendStakeholderNotifications(user: { role: UserRole; active: boolean } | null | undefined): boolean {
+  return !!user?.active && (user.role === 'DUTY_OFFICER' || user.role === 'DMC_ANALYST');
+}

@@ -6,10 +6,10 @@ import CardContent from '@mui/material/CardContent';
 import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { useState } from 'react';
 
 import { PageHeader } from '../components/layout/PageHeader';
-import { signOutOfficer } from '../features/auth/auth.service';
+import { useOfficerSignOut } from '../features/auth/useOfficerSignOut';
+import Alert from '@mui/material/Alert';
 import { useAuthStore } from '../store/authStore';
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -25,7 +25,7 @@ function Row({ label, value }: { label: string; value: string }) {
 
 export default function ProfilePage() {
   const user = useAuthStore((s) => s.user);
-  const [signingOut, setSigningOut] = useState(false);
+  const { signingOut, error, signOut } = useOfficerSignOut();
 
   if (!user) return null;
 
@@ -34,6 +34,7 @@ export default function ProfilePage() {
       <PageHeader title="Profile" />
       <Card sx={{ maxWidth: 560 }}>
         <CardContent>
+          {error && <Alert severity="error">{error}</Alert>}
           <Row label="Name" value={user.fullName} />
           <Divider />
           <Row label="Email" value={user.email} />
@@ -47,10 +48,7 @@ export default function ProfilePage() {
             startIcon={<LogoutOutlined />}
             disabled={signingOut}
             sx={{ mt: 2 }}
-            onClick={() => {
-              setSigningOut(true);
-              void signOutOfficer().finally(() => setSigningOut(false));
-            }}>
+            onClick={() => void signOut()}>
             {signingOut ? 'Signing out…' : 'Logout'}
           </Button>
         </CardContent>

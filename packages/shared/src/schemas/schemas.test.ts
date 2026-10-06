@@ -79,9 +79,21 @@ describe('verificationDecisionInputSchema', () => {
 
   it('allows verification without remarks', () => {
     for (const outcome of ['VERIFIED_INFO', 'VERIFIED_ESCALATED']) {
-      expect(verificationDecisionInputSchema.safeParse({ outcome, remarks: '' }).success).toBe(
-        true,
-      );
+      expect(
+        verificationDecisionInputSchema.safeParse({
+          outcome,
+          remarks: '',
+          ...(outcome === 'VERIFIED_ESCALATED'
+            ? {
+                stakeholderNotification: {
+                  stakeholders: ['CITIZEN'],
+                  title: 'Flood',
+                  message: 'Verified flooding',
+                },
+              }
+            : {}),
+        }).success,
+      ).toBe(true);
     }
   });
 });
@@ -139,5 +151,34 @@ describe('reportFiltersInputSchema', () => {
       to: '2025-05-20',
     });
     expect(issuePaths(result)).toEqual(['to']);
+  });
+});
+
+describe('stakeholder escalation validation', () => {
+  it('requires recipients and message for escalation', () => {
+    expect(
+      verificationDecisionInputSchema.safeParse({ outcome: 'VERIFIED_ESCALATED', remarks: '' })
+        .success,
+    ).toBe(false);
+    expect(
+      verificationDecisionInputSchema.safeParse({
+        outcome: 'VERIFIED_ESCALATED',
+        remarks: '',
+        stakeholderNotification: { stakeholders: [], title: ' ', message: '' },
+      }).success,
+    ).toBe(false);
+  });
+  it('accepts multiple selected stakeholders', () => {
+    expect(
+      verificationDecisionInputSchema.safeParse({
+        outcome: 'VERIFIED_ESCALATED',
+        remarks: '',
+        stakeholderNotification: {
+          stakeholders: ['CITIZEN', 'VOLUNTEER'],
+          title: 'Fire',
+          message: 'Verified fire hazard',
+        },
+      }).success,
+    ).toBe(true);
   });
 });

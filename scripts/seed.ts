@@ -668,7 +668,14 @@ function buildDocuments(uids: Record<DemoUserKey, string>) {
       district: spec.district,
       disasterEventId: review?.eventId,
       latestDecision: review
-        ? { decisionId, outcome: review.outcome, remarks: review.remarks, decidedAt }
+        ? {
+            decisionId,
+            officerId: uids.dutyOfficer,
+            officerName: DEMO_USERS.dutyOfficer.fullName,
+            outcome: review.outcome,
+            remarks: review.remarks,
+            decidedAt,
+          }
         : undefined,
       createdAt: spec.createdAt,
       updatedAt: review ? decidedAt : spec.createdAt,
@@ -682,6 +689,7 @@ function buildDocuments(uids: Record<DemoUserKey, string>) {
       decisionId,
       reportId,
       officerId: uids.dutyOfficer,
+      officerName: DEMO_USERS.dutyOfficer.fullName,
       outcome: review.outcome,
       remarks: review.remarks,
       disasterEventId: review.eventId,
@@ -713,8 +721,12 @@ function buildDocuments(uids: Record<DemoUserKey, string>) {
         severity: spec.severity,
         affectedDistrict: spec.district,
         status: eventActive ? 'PENDING_ASSESSMENT' : 'APPROVED',
+        deliveryStatus: eventActive ? 'PENDING' : 'SENT',
         createdAt: decidedAt,
       });
+
+      // Active requests await assessment; only completed examples have sent warnings.
+      if (eventActive) continue;
 
       // A district-wide warning sent to both mobile demo users.
       for (const recipient of ['citizen', 'volunteer'] as const) {

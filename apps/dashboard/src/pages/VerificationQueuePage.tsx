@@ -7,7 +7,6 @@ import {
   toErrorMessage,
   USER_ROLE_LABELS,
   type HazardReport,
-  type HazardReportStatus,
   type HazardType,
   type Severity,
 } from '@lankashield/shared';
@@ -38,6 +37,7 @@ import { ErrorState } from '../components/feedback/ErrorState';
 import { LoadingState } from '../components/feedback/LoadingState';
 import { StatusChip } from '../components/feedback/StatusChip';
 import { PageHeader } from '../components/layout/PageHeader';
+import type { VerificationQueueStatus } from '../features/verification/verification.service';
 import { useVerificationQueue } from '../features/verification/useVerificationQueue';
 import { formatDateTime, formatRelative } from '../utils/format';
 
@@ -48,11 +48,11 @@ const SEVERITY_COLOR = {
   EXTREME: 'error',
 } as const;
 
-const STATUS_OPTIONS: HazardReportStatus[] = [
+const STATUS_OPTIONS: VerificationQueueStatus[] = [
   'PENDING_VERIFICATION',
   'VERIFIED',
-  'ESCALATED',
   'REJECTED',
+  'ALL',
 ];
 
 interface Filters {
@@ -154,7 +154,7 @@ function QueueTable({ reports }: { reports: HazardReport[] }) {
 
 /** UC02 verification queue: live list with search, filters and pagination. */
 export default function VerificationQueuePage() {
-  const [status, setStatus] = useState<HazardReportStatus>('PENDING_VERIFICATION');
+  const [status, setStatus] = useState<VerificationQueueStatus>('PENDING_VERIFICATION');
   const { state, retry } = useVerificationQueue(status);
   const [filters, setFilters] = useState<Filters>({
     search: '',
@@ -167,7 +167,8 @@ export default function VerificationQueuePage() {
 
   const all = state.status === 'success' ? state.data : [];
   const filtered = applyFilters(all, filters);
-  const pageRows = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  const currentPage = Math.min(page, Math.max(0, Math.ceil(filtered.length / rowsPerPage) - 1));
+  const pageRows = filtered.slice(currentPage * rowsPerPage, (currentPage + 1) * rowsPerPage);
   const districts = [...new Set(all.map((r) => r.district))].sort();
 
   const update = (patch: Partial<Filters>) => {
@@ -184,7 +185,7 @@ export default function VerificationQueuePage() {
           state.status === 'success' ? (
             <Chip
               icon={<FiberManualRecord sx={{ fontSize: 12 }} />}
-              label={`Live · ${all.length} ${HAZARD_REPORT_STATUS_PRESENTATION[status].label.toLowerCase()}`}
+              label={`Live · ${all.length} ${status === 'ALL' ? 'all' : HAZARD_REPORT_STATUS_PRESENTATION[status].label.toLowerCase()}`}
               color="success"
               variant="outlined"
             />
@@ -217,13 +218,13 @@ export default function VerificationQueuePage() {
             label="Status"
             value={status}
             onChange={(e) => {
-              setStatus(e.target.value as HazardReportStatus);
+              setStatus(e.target.value as VerificationQueueStatus);
               setPage(0);
             }}
             sx={{ minWidth: 200 }}>
             {STATUS_OPTIONS.map((s) => (
               <MenuItem key={s} value={s}>
-                {HAZARD_REPORT_STATUS_PRESENTATION[s].label}
+                {s === 'ALL' ? 'All' : HAZARD_REPORT_STATUS_PRESENTATION[s].label}
               </MenuItem>
             ))}
           </TextField>
@@ -283,7 +284,7 @@ export default function VerificationQueuePage() {
             title={
               status === 'PENDING_VERIFICATION'
                 ? 'No reports waiting for verification'
-                : `No ${HAZARD_REPORT_STATUS_PRESENTATION[status].label.toLowerCase()} reports`
+                : `No ${status === 'ALL' ? 'all' : HAZARD_REPORT_STATUS_PRESENTATION[status].label.toLowerCase()} reports`
             }
             message={
               status === 'PENDING_VERIFICATION'
@@ -301,7 +302,7 @@ export default function VerificationQueuePage() {
             <TablePagination
               component="div"
               count={filtered.length}
-              page={page}
+              page={currentPage}
               onPageChange={(_, p) => setPage(p)}
               rowsPerPage={rowsPerPage}
               onRowsPerPageChange={(e) => {

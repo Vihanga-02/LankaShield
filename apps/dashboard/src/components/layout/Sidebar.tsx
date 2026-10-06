@@ -9,17 +9,17 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import Typography from '@mui/material/Typography';
-import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router';
 
 import { NAV_ITEMS } from '../../app/navigation';
-import { signOutOfficer } from '../../features/auth/auth.service';
+import { useOfficerSignOut } from '../../features/auth/useOfficerSignOut';
+import Alert from '@mui/material/Alert';
 import { useAuthStore } from '../../store/authStore';
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const user = useAuthStore((s) => s.user);
   const { pathname } = useLocation();
-  const [signingOut, setSigningOut] = useState(false);
+  const { signingOut, error, signOut: onSignOut } = useOfficerSignOut();
 
   if (!user) return null;
 
@@ -27,10 +27,6 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const isActive = (path: string) =>
     path === '/' ? pathname === '/' : pathname === path || pathname.startsWith(`${path}/`);
 
-  const onSignOut = async () => {
-    setSigningOut(true);
-    await signOutOfficer().finally(() => setSigningOut(false));
-  };
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -65,6 +61,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
       <Divider />
       <Box sx={{ p: 2 }}>
+        {error && <Alert severity="error">{error}</Alert>}
         <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
           {user.fullName}
         </Typography>

@@ -5,3 +5,4 @@ export * from './verification';
 export * from './shelter';
 export * from './disaster';
 export * from './notification';
+export * from './stakeholderNotification';

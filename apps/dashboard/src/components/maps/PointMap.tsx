@@ -1,6 +1,7 @@
 import { colors, SRI_LANKA_REGION, type GeoPoint } from '@lankashield/shared';
-import { AdvancedMarker, Map, Pin, type MapMouseEvent } from '@vis.gl/react-google-maps';
+import { Map, type MapMouseEvent } from '@vis.gl/react-google-maps';
 
+import { MapMarker } from './MapMarker';
 import { MapFrame } from './MapFrame';
 import { MAP_ID } from './config';
 
@@ -42,13 +43,13 @@ export function PointMap({
         onClick={onPick ? onClick : undefined}
         style={{ width: '100%', height: '100%' }}>
         {point ? (
-          <AdvancedMarker position={toLatLng(point)} title="Location">
-            <Pin
-              background={colors.primary}
-              borderColor={colors.primaryHover}
-              glyphColor={colors.surface}
-            />
-          </AdvancedMarker>
+          <MapMarker
+            position={toLatLng(point)}
+            title="Location"
+            background={colors.primary}
+            borderColor={colors.primaryHover}
+            glyphColor={colors.surface}
+          />
         ) : null}
       </Map>
     </MapFrame>

@@ -6,6 +6,9 @@ import {
   findPossibleDuplicates,
   OUTCOME_TO_REPORT_STATUS,
   verificationNotificationText,
+  verificationDecisionInputSchema,
+  type VerificationDecision,
+  type WarningRequest,
   type AppUser,
   type DisasterEvent,
   type DuplicateCandidate,
@@ -36,14 +39,22 @@ const reportRef = (id: string) =>
 
 const newestFirst = (a: HazardReport, b: HazardReport) => b.createdAt.localeCompare(a.createdAt);
 
+export type VerificationQueueStatus = 'PENDING_VERIFICATION' | 'VERIFIED' | 'REJECTED' | 'ALL';
+
 /** Live list of reports with one status (default: waiting for a decision), newest first. */
 export function subscribeToReportsByStatus(
-  status: HazardReportStatus,
+  status: VerificationQueueStatus,
   onData: (reports: HazardReport[]) => void,
   onError: (error: unknown) => void,
 ): Unsubscribe {
   // Sorted in the browser so the query needs no composite index.
-  const q = query(reports(), where('status', '==', status));
+  const statuses: HazardReportStatus[] =
+    status === 'ALL'
+      ? ['PENDING_VERIFICATION', 'VERIFIED', 'REJECTED', 'ESCALATED']
+      : status === 'VERIFIED'
+        ? ['VERIFIED', 'ESCALATED']
+        : [status];
+  const q = query(reports(), where('status', 'in', statuses));
   return onSnapshot(q, (snap) => onData(snap.docs.map((d) => d.data()).sort(newestFirst)), onError);
 }
 
@@ -102,9 +113,10 @@ export async function submitVerificationDecision({
   input,
 }: {
   reportId: string;
-  officer: Pick<AppUser, 'uid'>;
+  officer: Pick<AppUser, 'uid' | 'fullName'>;
   input: VerificationDecisionInput;
 }): Promise<{ decisionId: string }> {
+  input = verificationDecisionInputSchema.parse(input);
   return runTransaction(db, async (tx) => {
     const snap = await tx.get(reportRef(reportId));
     if (!snap.exists()) throw new AppError('REPORT_NOT_FOUND');
@@ -120,6 +132,7 @@ export async function submitVerificationDecision({
       decisionId,
       reportId,
       officerId: officer.uid,
+      officerName: officer.fullName,
       outcome: input.outcome,
       remarks,
       disasterEventId,
@@ -131,7 +144,14 @@ export async function submitVerificationDecision({
     tx.update(reportRef(reportId), {
       status: OUTCOME_TO_REPORT_STATUS[input.outcome],
       ...(disasterEventId ? { disasterEventId } : {}),
-      latestDecision: { decisionId, outcome: input.outcome, remarks, decidedAt: serverTimestamp() },
+      latestDecision: {
+        decisionId,
+        officerId: officer.uid,
+        officerName: officer.fullName,
+        outcome: input.outcome,
+        remarks,
+        decidedAt: serverTimestamp(),
+      },
       updatedAt: serverTimestamp(),
     });
 
@@ -145,7 +165,28 @@ export async function submitVerificationDecision({
         severity: report.severity,
         affectedDistrict: report.district,
         status: 'PENDING_ASSESSMENT',
+        deliveryStatus: 'PENDING',
         createdAt: serverTimestamp(),
+      });
+      const notification = input.stakeholderNotification!;
+      const outboxRef = doc(collection(db, COLLECTIONS.stakeholderNotifications));
+      tx.set(outboxRef.withConverter(converters.stakeholderNotifications), {
+        notificationId: outboxRef.id,
+        reportId,
+        reportTitle: report.title,
+        hazardType: report.hazardType,
+        district: report.district,
+        warningRequestId: warningRef.id,
+        stakeholders: [...new Set(notification.stakeholders)],
+        title: notification.title,
+        message: notification.message,
+        createdBy: officer.uid,
+        officerName: officer.fullName,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        deliveryStatus: 'PENDING',
+        sendRequested: false,
+        attemptCount: 0,
       });
     }
 
@@ -163,5 +204,56 @@ export async function submitVerificationDecision({
     });
 
     return { decisionId };
+  });
+}
+
+/** Live audit records and delivery results persisted by the warning sender. */
+export function subscribeToDecision(
+  decisionId: string,
+  onData: (decision: VerificationDecision | null) => void,
+  onError: (error: unknown) => void,
+): Unsubscribe {
+  return onSnapshot(
+    doc(db, COLLECTIONS.verificationDecisions, decisionId).withConverter(
+      converters.verificationDecisions,
+    ),
+    (snap) => onData(snap.exists() ? snap.data() : null),
+    onError,
+  );
+}
+export function subscribeToWarnings(
+  reportId: string,
+  onData: (warnings: WarningRequest[]) => void,
+  onError: (error: unknown) => void,
+): Unsubscribe {
+  return onSnapshot(
+    query(
+      collection(db, COLLECTIONS.warningRequests).withConverter(converters.warningRequests),
+      where('sourceReportId', '==', reportId),
+    ),
+    (snap) => onData(snap.docs.map((d) => d.data())),
+    onError,
+  );
+}
+export async function loadOfficerName(officerId: string): Promise<string> {
+  const snap = await getDoc(doc(db, COLLECTIONS.users, officerId).withConverter(converters.users));
+  return snap.exists() ? snap.data().fullName : officerId;
+}
+
+/** Called only with a real delivery result; never by the verification submit action. */
+export async function recordWarningDeliveryResult(
+  warningRequestId: string,
+  result: 'SENT' | 'FAILED',
+): Promise<void> {
+  if (result !== 'SENT' && result !== 'FAILED') throw new AppError('VALIDATION_FAILED');
+  const ref = doc(db, COLLECTIONS.warningRequests, warningRequestId).withConverter(
+    converters.warningRequests,
+  );
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) throw new AppError('INCOMPLETE_DATA', 'Warning request not found.');
+    // A late failure from an earlier attempt must not overwrite confirmed delivery.
+    if (snap.data().deliveryStatus === 'SENT') return;
+    tx.update(ref, { deliveryStatus: result, updatedAt: serverTimestamp() });
   });
 }

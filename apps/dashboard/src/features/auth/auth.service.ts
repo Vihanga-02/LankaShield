@@ -22,7 +22,7 @@ export async function signOutOfficer(notice?: string): Promise<void> {
   useAuthStore.getState().setSignedOut(notice);
 }
 
-async function handleAuthUser(user: User | null): Promise<void> {
+async function handleAuthUser(user: User | null, isCurrent: () => boolean): Promise<void> {
   const store = useAuthStore.getState();
   if (!user) {
     // Keep a notice set by a forced sign-out.
@@ -32,6 +32,7 @@ async function handleAuthUser(user: User | null): Promise<void> {
 
   try {
     const snap = await getDoc(doc(db, COLLECTIONS.users, user.uid).withConverter(converters.users));
+    if (!isCurrent()) return;
     const profile = snap.exists() ? snap.data() : null;
 
     if (!profile) {
@@ -46,11 +47,19 @@ async function handleAuthUser(user: User | null): Promise<void> {
       store.setSignedIn({ ...profile, role: profile.role });
     }
   } catch (err) {
+    if (!isCurrent()) return;
     await signOutOfficer(toErrorMessage(err));
   }
 }
 
 /** Subscribes to Firebase Auth for the lifetime of the app. Returns the unsubscribe function. */
 export function subscribeToAuth(): () => void {
-  return onAuthStateChanged(auth, (user) => void handleAuthUser(user));
+  let generation = 0;
+  const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const current = ++generation;
+    void handleAuthUser(user, () => generation === current).catch((error) => {
+      if (generation === current) useAuthStore.getState().setSignedOut(toErrorMessage(error));
+    });
+  });
+  return () => { generation++; unsubscribe(); };
 }

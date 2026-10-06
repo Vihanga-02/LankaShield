@@ -4,7 +4,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Link from '@mui/material/Link';
 import Typography from '@mui/material/Typography';
 import { APILoadingStatus, useApiLoadingStatus } from '@vis.gl/react-google-maps';
-import type { ReactNode } from 'react';
+import { Component, type ReactNode } from 'react';
 
 import { hasMapsKey } from './config';
 
@@ -49,6 +49,27 @@ function Fallback({
       ) : null}
     </Box>
   );
+}
+
+class MapErrorBoundary extends Component<
+  { children: ReactNode; height: number; point?: { latitude: number; longitude: number } },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    return this.state.failed ? (
+      <Fallback
+        height={this.props.height}
+        point={this.props.point}
+        message="The map is temporarily unavailable. You can continue using this page."
+      />
+    ) : (
+      this.props.children
+    );
+  }
 }
 
 function LoadedGate({
@@ -97,8 +118,10 @@ export function MapFrame({
     );
   }
   return (
-    <LoadedGate height={height} point={point}>
-      {children}
-    </LoadedGate>
+    <MapErrorBoundary height={height} point={point}>
+      <LoadedGate height={height} point={point}>
+        {children}
+      </LoadedGate>
+    </MapErrorBoundary>
   );
 }

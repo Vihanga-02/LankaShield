@@ -7,9 +7,10 @@ import {
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
-import { AdvancedMarker, InfoWindow, Map, Pin, useMap } from '@vis.gl/react-google-maps';
+import { InfoWindow, Map, useMap } from '@vis.gl/react-google-maps';
 import { useEffect, useState } from 'react';
 
+import { MapMarker } from './MapMarker';
 import { MAP_ID } from './config';
 import { MapFrame } from './MapFrame';
 
@@ -61,13 +62,15 @@ export function ShelterMap({
           const presentation = SHELTER_STATUS_PRESENTATION[s.status];
           const color = colors[presentation.color];
           return (
-            <AdvancedMarker
+            <MapMarker
               key={s.shelterId}
               position={{ lat: s.location.latitude, lng: s.location.longitude }}
               title={`${s.name} — ${presentation.label}, ${s.availableCapacity} places available`}
-              onClick={() => setSelectedId(s.shelterId)}>
-              <Pin background={color} borderColor={colors.surface} glyphColor={colors.surface} />
-            </AdvancedMarker>
+              onClick={() => setSelectedId(s.shelterId)}
+              background={color}
+              borderColor={colors.surface}
+              glyphColor={colors.surface}
+            />
           );
         })}
         {selected ? (

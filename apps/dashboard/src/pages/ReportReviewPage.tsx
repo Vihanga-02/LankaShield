@@ -1,25 +1,24 @@
+import { Section, Row } from '../features/verification/ReviewLayout';
+import { RecordedDecision } from '../features/verification/RecordedDecision';
 import {
   HAZARD_REPORT_STATUS_PRESENTATION,
   HAZARD_TYPE_LABELS,
   SEVERITY_LABELS,
   toErrorMessage,
   USER_ROLE_LABELS,
-  VERIFICATION_OUTCOME_LABELS,
   type HazardReport,
 } from '@lankashield/shared';
 import ArrowBackOutlined from '@mui/icons-material/ArrowBackOutlined';
 import ContentCopyOutlined from '@mui/icons-material/ContentCopyOutlined';
 import SearchOffOutlined from '@mui/icons-material/SearchOffOutlined';
-import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
 import Divider from '@mui/material/Divider';
 import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { useCallback, type ReactNode } from 'react';
+import { useCallback } from 'react';
 import { Link as RouterLink, useParams } from 'react-router';
 
 import { EmptyState } from '../components/feedback/EmptyState';
@@ -37,30 +36,6 @@ import { useAsync } from '../hooks/useAsync';
 import { useLive, type Subscribe } from '../hooks/useLive';
 import { formatDateTime } from '../utils/format';
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          {title}
-        </Typography>
-        {children}
-      </CardContent>
-    </Card>
-  );
-}
-
-function Row({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <Stack direction="row" spacing={2} sx={{ py: 0.75 }}>
-      <Typography color="textSecondary" sx={{ width: 140, flexShrink: 0 }}>
-        {label}
-      </Typography>
-      <Box sx={{ minWidth: 0 }}>{value}</Box>
-    </Stack>
-  );
-}
-
 function ContextPanels({ report }: { report: HazardReport }) {
   const load = useCallback(() => loadReviewContext(report), [report]);
   const { state, retry } = useAsync<ReviewContext>(load);
@@ -74,24 +49,13 @@ function ContextPanels({ report }: { report: HazardReport }) {
 
   return (
     <Stack spacing={3}>
-      <Section title={pending ? 'Decision' : 'Recorded decision'}>
-        {pending ? (
-          <DecisionForm reportId={report.reportId} events={events} />
-        ) : report.latestDecision ? (
-          <>
-            <Alert severity="success" sx={{ mb: 2 }}>
-              {VERIFICATION_OUTCOME_LABELS[report.latestDecision.outcome]} — recorded{' '}
-              {formatDateTime(report.latestDecision.decidedAt)}. The reporter has been notified.
-            </Alert>
-            <Row label="Remarks" value={report.latestDecision.remarks || '—'} />
-            <Row
-              label="Disaster event"
-              value={events.find((e) => e.eventId === report.disasterEventId)?.name ?? 'Not linked'}
-            />
-          </>
-        ) : (
-          <Typography color="textSecondary">This report has already been reviewed.</Typography>
-        )}
+      {pending && (
+        <Section title="Decision">
+          <DecisionForm report={report} events={events} />
+        </Section>
+      )}
+      <Section title="Disaster event">
+        {events.find((e) => e.eventId === report.disasterEventId)?.name ?? 'Not linked'}
       </Section>
 
       <Section title="Reporter">
@@ -231,7 +195,12 @@ function ReviewContent({ report }: { report: HazardReport }) {
           </Section>
         </Stack>
 
-        <ContextPanels report={report} />
+        <Stack spacing={3}>
+          {report.status !== 'PENDING_VERIFICATION' && (
+            <RecordedDecision key={report.reportId} report={report} />
+          )}
+          <ContextPanels report={report} />
+        </Stack>
       </Box>
     </>
   );

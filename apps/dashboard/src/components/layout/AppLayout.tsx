@@ -8,6 +8,7 @@ import Typography from '@mui/material/Typography';
 import { Suspense, useState } from 'react';
 import { Outlet } from 'react-router';
 
+import { NotificationRetry } from '../../features/notifications/NotificationRetry';
 import { CONTENT_PADDING } from '../../theme/theme';
 import { LoadingState } from '../feedback/LoadingState';
 import { MapsProvider } from '../maps/MapsProvider';
@@ -28,6 +29,7 @@ export function AppLayout() {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      <NotificationRetry />
       <Box component="aside" sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}>
         {/* Small screens: temporary drawer opened from the top bar. */}
         <Drawer

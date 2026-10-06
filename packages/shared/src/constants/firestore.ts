@@ -9,6 +9,7 @@ export const COLLECTIONS = {
   disasterEvents: 'disasterEvents',
   responseReports: 'responseReports',
   notifications: 'notifications',
+  stakeholderNotifications: 'stakeholderNotifications',
 } as const;
 
 /** Cloud Storage paths (§8.2). */
