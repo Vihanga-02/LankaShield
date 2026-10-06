@@ -1,127 +1,100 @@
-import MapOutlined from '@mui/icons-material/MapOutlined';
+import 'leaflet/dist/leaflet.css';
+
+import type { GeoPoint } from '@lankashield/shared';
 import Box from '@mui/material/Box';
-import CircularProgress from '@mui/material/CircularProgress';
 import Link from '@mui/material/Link';
 import Typography from '@mui/material/Typography';
-import { APILoadingStatus, useApiLoadingStatus } from '@vis.gl/react-google-maps';
-import { Component, type ReactNode } from 'react';
+import type { LatLngTuple } from 'leaflet';
+import { useEffect, useState, type ReactNode } from 'react';
+import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 
-import { hasMapsKey } from './config';
+import { OSM_ATTRIBUTION, OSM_TILE_URL, osmLink } from './config';
 
-function Fallback({
-  height,
-  message,
-  point,
-}: {
-  height: number;
-  message: string;
-  point?: { latitude: number; longitude: number };
-}) {
-  return (
-    <Box
-      role="img"
-      aria-label={message}
-      sx={{
-        height,
-        borderRadius: 2,
-        border: 1,
-        borderColor: 'divider',
-        bgcolor: 'background.default',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 1,
-        textAlign: 'center',
-        p: 2,
-        color: 'text.secondary',
-      }}>
-      <MapOutlined />
-      <Typography variant="body2">{message}</Typography>
-      {point ? (
-        <Link
-          href={`https://www.google.com/maps/search/?api=1&query=${point.latitude},${point.longitude}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          variant="body2">
-          {point.latitude.toFixed(5)}, {point.longitude.toFixed(5)} — open in Google Maps
-        </Link>
-      ) : null}
-    </Box>
-  );
+/** Keeps Leaflet's size in step with its container (dialogs, responsive layouts). */
+function ResizeWatcher() {
+  const map = useMap();
+  useEffect(() => {
+    const observer = new ResizeObserver(() => map.invalidateSize());
+    observer.observe(map.getContainer());
+    return () => observer.disconnect();
+  }, [map]);
+  return null;
 }
 
-class MapErrorBoundary extends Component<
-  { children: ReactNode; height: number; point?: { latitude: number; longitude: number } },
-  { failed: boolean }
-> {
-  state = { failed: false };
-  static getDerivedStateFromError() {
-    return { failed: true };
-  }
-  render() {
-    return this.state.failed ? (
-      <Fallback
-        height={this.props.height}
-        point={this.props.point}
-        message="The map is temporarily unavailable. You can continue using this page."
-      />
-    ) : (
-      this.props.children
-    );
-  }
-}
-
-function LoadedGate({
-  height,
-  point,
-  children,
-}: {
-  height: number;
-  point?: { latitude: number; longitude: number };
-  children: ReactNode;
-}) {
-  const status = useApiLoadingStatus();
-  if (status === APILoadingStatus.FAILED || status === APILoadingStatus.AUTH_FAILURE) {
-    return (
-      <Fallback
-        height={height}
-        point={point}
-        message="The map could not be loaded. Check the Maps JavaScript API key."
-      />
-    );
-  }
-  if (status !== APILoadingStatus.LOADED) {
-    return (
-      <Box sx={{ height, display: 'grid', placeItems: 'center' }}>
-        <CircularProgress size={28} aria-label="Loading map" />
-      </Box>
-    );
-  }
-  return <Box sx={{ height, borderRadius: 2, overflow: 'hidden' }}>{children}</Box>;
-}
-
-/** Renders the map only when the Maps API is available; otherwise a readable fallback (Phase 10). */
+/**
+ * OpenStreetMap base map (D42). When tiles cannot load (offline), a notice with the
+ * coordinates and an OpenStreetMap link is shown over the map, so the location is still readable.
+ */
 export function MapFrame({
   height = 320,
+  center,
+  zoom,
   point,
   children,
 }: {
   height?: number;
-  /** Shown as coordinates + Google Maps link when the map cannot load. */
-  point?: { latitude: number; longitude: number };
-  children: ReactNode;
+  center: LatLngTuple;
+  zoom: number;
+  /** Shown as coordinates + link when tiles cannot load. */
+  point?: GeoPoint;
+  children?: ReactNode;
 }) {
-  if (!hasMapsKey) {
-    return (
-      <Fallback height={height} point={point} message="Maps are not configured (no web API key)." />
-    );
-  }
+  const [tilesFailed, setTilesFailed] = useState(false);
+
   return (
-    <MapErrorBoundary height={height} point={point}>
-      <LoadedGate height={height} point={point}>
+    <Box
+      sx={{
+        position: 'relative',
+        height,
+        borderRadius: 2,
+        overflow: 'hidden',
+        border: 1,
+        borderColor: 'divider',
+        // Keep the map under the sticky top bar, drawers and dialogs.
+        isolation: 'isolate',
+        '& .leaflet-container': { width: '100%', height: '100%', fontFamily: 'inherit' },
+        '& .ls-pin': { background: 'none', border: 0 },
+        // Leaflet spaces popup paragraphs widely; MUI Typography renders paragraphs.
+        '& .leaflet-popup-content p': { margin: 0 },
+      }}>
+      <MapContainer center={center} zoom={zoom} scrollWheelZoom={false}>
+        <TileLayer
+          url={OSM_TILE_URL}
+          attribution={OSM_ATTRIBUTION}
+          maxZoom={19}
+          eventHandlers={{
+            tileerror: () => setTilesFailed(true),
+            tileload: () => setTilesFailed(false),
+          }}
+        />
+        <ResizeWatcher />
         {children}
-      </LoadedGate>
-    </MapErrorBoundary>
+      </MapContainer>
+
+      {tilesFailed ? (
+        <Box
+          role="status"
+          sx={{
+            position: 'absolute',
+            left: 8,
+            right: 8,
+            bottom: 28,
+            zIndex: 1000,
+            p: 1.5,
+            borderRadius: 2,
+            bgcolor: 'background.paper',
+            boxShadow: 2,
+          }}>
+          <Typography variant="body2">
+            Map tiles could not be loaded. Check your internet connection.
+          </Typography>
+          {point ? (
+            <Link href={osmLink(point)} target="_blank" rel="noopener noreferrer" variant="body2">
+              {point.latitude.toFixed(5)}, {point.longitude.toFixed(5)} — open in OpenStreetMap
+            </Link>
+          ) : null}
+        </Box>
+      ) : null}
+    </Box>
   );
 }
