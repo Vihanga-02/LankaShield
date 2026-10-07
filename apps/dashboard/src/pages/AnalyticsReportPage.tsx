@@ -44,7 +44,7 @@ import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link as RouterLink, useParams } from 'react-router';
 
 import { ChartCard } from '../components/charts/ChartCard';
@@ -62,6 +62,7 @@ import { PageHeader } from '../components/layout/PageHeader';
 import {
   getEvent,
   loadAnalyticsSources,
+  newResponseReportId,
   recordShare,
   saveResponseReport,
   subscribeToResponseReports,
@@ -149,6 +150,8 @@ function EventAnalytics({ event }: { event: DisasterEvent }) {
 
   const [saved, setSaved] = useState<{ n: number; id: string } | null>(null);
   const savedId = saved?.n === request.n ? saved.id : null;
+  // One document ID per analysis run, reused by every save retry (no duplicate saved reports).
+  const draftId = useRef<{ n: number; id: string } | null>(null);
   const [busy, setBusy] = useState<'saving' | 'exporting' | 'sharing' | null>(null);
   const [actionError, setActionError] = useState<{
     action: 'save' | 'export' | 'share';
@@ -214,7 +217,16 @@ function EventAnalytics({ event }: { event: DisasterEvent }) {
   const ensureSaved = async (): Promise<string> => {
     if (savedId) return savedId;
     if (!analyst) throw new Error('Not signed in.');
-    const id = await saveResponseReport({ event, result, filters, analyst });
+    if (draftId.current?.n !== request.n) {
+      draftId.current = { n: request.n, id: newResponseReportId() };
+    }
+    const id = await saveResponseReport({
+      responseReportId: draftId.current.id,
+      event,
+      result,
+      filters,
+      analyst,
+    });
     setSaved({ n: request.n, id });
     return id;
   };
