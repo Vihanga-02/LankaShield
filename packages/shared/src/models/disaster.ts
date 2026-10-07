@@ -20,11 +20,10 @@ export interface ReportFilters {
 }
 
 export interface ResponseMetrics {
-  reportsReceived: number;
-  verifiedReports: number;
+  alertsIssued: number;
   citizensReached: number;
-  shelterOccupancy: number;
-  allocatedEvacuees: number;
+  sheltersActivated: number;
+  resourcesDistributed: number;
 }
 
 export type MetricKey = keyof ResponseMetrics;
@@ -57,4 +56,55 @@ export interface DisasterResponseReport {
   generatedAt: IsoDateString;
   exportedUrl?: string;
   shares?: ReportShare[];
+}
+
+export type AlertLevel = 'HIGH' | 'MEDIUM' | 'ADVISORY';
+
+/** `eventAlerts/{alertId}` — an official warning issued during a disaster event. */
+export interface EventAlert {
+  alertId: string;
+  disasterEventId: string;
+  level: AlertLevel;
+  district: District;
+  issuedAt: IsoDateString;
+  acknowledged: boolean;
+}
+
+/** `citizenReach/{reachId}` — final unique alert reach for one GS division. */
+export interface CitizenReachRecord {
+  reachId: string;
+  disasterEventId: string;
+  district: District;
+  gsDivision: string;
+  citizensReached: number;
+  recordedAt: IsoDateString;
+}
+
+/** `shelterOccupancyHistory/{snapshotId}` — historical event occupancy, not today's value. */
+export interface ShelterOccupancySnapshot {
+  snapshotId: string;
+  disasterEventId: string;
+  shelterId: string;
+  district: District;
+  occupancy: number;
+  capacity: number;
+  recordedAt: IsoDateString;
+}
+
+export type ReliefResourceCategory =
+  | 'FOOD_PACK'
+  | 'WATER_KIT'
+  | 'MEDICAL_KIT'
+  | 'HYGIENE_KIT'
+  | 'BLANKET'
+  | 'OTHER';
+
+/** `resourceDistributions/{distributionId}` — relief issued for an event destination district. */
+export interface ResourceDistribution {
+  distributionId: string;
+  disasterEventId: string;
+  district: District;
+  category: ReliefResourceCategory;
+  quantity: number;
+  distributedAt: IsoDateString;
 }

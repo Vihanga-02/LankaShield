@@ -1,6 +1,14 @@
 import { HAZARD_TYPE_LABELS } from '../constants/labels';
 import { HAZARD_TYPES } from '../enums';
-import type { EmergencyShelter, HazardReport } from '../models';
+import type {
+  CitizenReachRecord,
+  EmergencyShelter,
+  EventAlert,
+  HazardReport,
+  ReliefResourceCategory,
+  ResourceDistribution,
+  ShelterOccupancySnapshot,
+} from '../models';
 
 export interface CountDatum {
   label: string;
@@ -76,4 +84,81 @@ export function occupancyByDistrict(shelters: readonly EmergencyShelter[]): Occu
       rate: capacity > 0 ? Math.round((occupancy / capacity) * 100) : 0,
     }))
     .sort((a, b) => b.rate - a.rate);
+}
+
+export interface AlertTimelineDatum {
+  day: string;
+  high: number;
+  medium: number;
+  advisory: number;
+}
+
+export function alertsByDay(alerts: readonly EventAlert[]): AlertTimelineDatum[] {
+  const rows = new Map<string, AlertTimelineDatum>();
+  for (const alert of alerts) {
+    const day = alert.issuedAt.slice(0, 10);
+    const row = rows.get(day) ?? { day, high: 0, medium: 0, advisory: 0 };
+    row[alert.level.toLowerCase() as 'high' | 'medium' | 'advisory']++;
+    rows.set(day, row);
+  }
+  return [...rows.values()].sort((a, b) => a.day.localeCompare(b.day));
+}
+
+export function citizenReachByDivision(records: readonly CitizenReachRecord[]): CountDatum[] {
+  const rows = new Map<string, number>();
+  for (const record of records) {
+    const label = `${record.gsDivision} (${record.district})`;
+    rows.set(label, (rows.get(label) ?? 0) + record.citizensReached);
+  }
+  return [...rows].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count);
+}
+
+export interface OccupancyTimelineDatum {
+  day: string;
+  occupancy: number;
+  capacity: number;
+  rate: number;
+}
+
+export function shelterOccupancyOverTime(
+  records: readonly ShelterOccupancySnapshot[],
+): OccupancyTimelineDatum[] {
+  const rows = new Map<string, { byShelter: Map<string, ShelterOccupancySnapshot> }>();
+  for (const record of records) {
+    const day = record.recordedAt.slice(0, 10);
+    const row = rows.get(day) ?? { byShelter: new Map() };
+    row.byShelter.set(record.shelterId, record);
+    rows.set(day, row);
+  }
+  return [...rows]
+    .map(([day, row]) => {
+      const snapshots = [...row.byShelter.values()];
+      const occupancy = snapshots.reduce((sum, item) => sum + item.occupancy, 0);
+      const capacity = snapshots.reduce((sum, item) => sum + item.capacity, 0);
+      return {
+        day,
+        occupancy,
+        capacity,
+        rate: capacity ? Math.round((occupancy / capacity) * 100) : 0,
+      };
+    })
+    .sort((a, b) => a.day.localeCompare(b.day));
+}
+
+const RESOURCE_CATEGORY_LABELS: Record<ReliefResourceCategory, string> = {
+  FOOD_PACK: 'Food Packs',
+  WATER_KIT: 'Drinking Water (L)',
+  MEDICAL_KIT: 'Medicine Kits',
+  HYGIENE_KIT: 'Hygiene Kits',
+  BLANKET: 'Blankets',
+  OTHER: 'Other',
+};
+
+export function resourcesByCategory(records: readonly ResourceDistribution[]): CountDatum[] {
+  const rows = new Map<ReliefResourceCategory, number>();
+  for (const record of records)
+    rows.set(record.category, (rows.get(record.category) ?? 0) + record.quantity);
+  return [...rows]
+    .map(([category, count]) => ({ label: RESOURCE_CATEGORY_LABELS[category], count }))
+    .sort((a, b) => b.count - a.count);
 }

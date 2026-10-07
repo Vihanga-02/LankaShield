@@ -1,20 +1,22 @@
 import {
   APP_ERROR_MESSAGES,
+  alertsByDay,
   calculateResponseMetrics,
+  citizenReachByDivision,
   DISASTER_REPORT_STATUS_PRESENTATION,
   DISTRICTS,
   HAZARD_TYPE_LABELS,
   METRIC_LABELS,
-  occupancyByDistrict,
+  resourcesByCategory,
   reportFiltersInputSchema,
   reportsByDay,
   reportsByHazardType,
+  shelterOccupancyOverTime,
   toErrorMessage,
   verificationOutcomes,
   type AnalyticsResult,
   type DisasterEvent,
   type DisasterResponseReport,
-  type EmergencyShelter,
   type ReportFilters,
   type ReportMetric,
 } from '@lankashield/shared';
@@ -46,7 +48,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link as RouterLink, useParams } from 'react-router';
 
 import { ChartCard } from '../components/charts/ChartCard';
-import { CountBarChart, OccupancyChart, ReportsByDayChart } from '../components/charts/charts';
+import {
+  AlertTimelineChart,
+  CountBarChart,
+  ReportsByDayChart,
+  ShelterOccupancyTimelineChart,
+} from '../components/charts/charts';
 import { EmptyState } from '../components/feedback/EmptyState';
 import { ErrorState } from '../components/feedback/ErrorState';
 import { LoadingState } from '../components/feedback/LoadingState';
@@ -75,7 +82,6 @@ const DONOR_ORGANISATIONS = [
 interface Analysis {
   result: AnalyticsResult;
   filters: ReportFilters;
-  shelters: readonly EmergencyShelter[] | null;
 }
 
 async function analyse(event: DisasterEvent, filters: ReportFilters): Promise<Analysis> {
@@ -83,7 +89,6 @@ async function analyse(event: DisasterEvent, filters: ReportFilters): Promise<An
   return {
     result: calculateResponseMetrics({ event, filters, ...sources, now: new Date().toISOString() }),
     filters,
-    shelters: sources.shelters,
   };
 }
 
@@ -115,10 +120,10 @@ function MetricTile({ metric }: { metric: ReportMetric }) {
 
 function EventAnalytics({ event }: { event: DisasterEvent }) {
   const analyst = useAuthStore((s) => s.user);
-  const defaultFilters: ReportFilters = { district: event.district };
+  const defaultFilters: ReportFilters = {};
 
   // Filter form
-  const [district, setDistrict] = useState<string>(event.district);
+  const [district, setDistrict] = useState<string>('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [filterError, setFilterError] = useState<string | null>(null);
@@ -192,14 +197,17 @@ function EventAnalytics({ event }: { event: DisasterEvent }) {
     );
   }
 
-  const { result, filters, shelters } = analysis.data;
+  const { result, filters } = analysis.data;
   const isFinal = result.status === 'FINAL';
   const byDay = reportsByDay(result.eventReports);
   const byHazard = reportsByHazardType(result.eventReports);
   const outcomes = verificationOutcomes(result.eventReports).map((o) =>
     o.label === 'Pending' ? { ...o, count: result.unreviewedReports } : o,
   );
-  const occupancy = occupancyByDistrict(shelters ?? []);
+  const alertTimeline = alertsByDay(result.alerts);
+  const reachByDivision = citizenReachByDivision(result.citizenReach);
+  const occupancyTimeline = shelterOccupancyOverTime(result.occupancySnapshots);
+  const resourceCategories = resourcesByCategory(result.resourceDistributions);
   const calculatedAt = result.metrics[0]?.calculatedAt ?? new Date().toISOString();
   const currentExportUrl = exportedUrl?.n === request.n ? exportedUrl.url : null;
 
@@ -239,7 +247,10 @@ function EventAnalytics({ event }: { event: DisasterEvent }) {
         generatedBy: analyst?.fullName ?? 'DMC Analyst',
         byHazard,
         outcomes,
-        occupancy,
+        alertTimeline,
+        reachByDivision,
+        occupancyTimeline,
+        resourceCategories,
       });
       const url = await uploadReportPdf(id, pdf.output('blob'));
       pdf.save(`LankaShield-${event.eventId}-${id}.pdf`);
@@ -284,6 +295,7 @@ function EventAnalytics({ event }: { event: DisasterEvent }) {
             value={district}
             onChange={(e) => setDistrict(e.target.value)}
             sx={{ minWidth: 170 }}>
+            <MenuItem value="">All event districts</MenuItem>
             {DISTRICTS.map((d) => (
               <MenuItem key={d} value={d}>
                 {d}
@@ -311,7 +323,7 @@ function EventAnalytics({ event }: { event: DisasterEvent }) {
           </Button>
           <Button
             onClick={() => {
-              setDistrict(event.district);
+              setDistrict('');
               setFrom('');
               setTo('');
               setFilterError(null);
@@ -362,8 +374,8 @@ function EventAnalytics({ event }: { event: DisasterEvent }) {
             <Alert severity="warning" sx={{ mt: 2 }}>
               {result.unreviewedReports} hazard report
               {result.unreviewedReports === 1 ? ' is' : 's are'} in {event.district} during this
-              event still waiting for verification. Report counts stay incomplete until a Duty
-              Officer reviews {result.unreviewedReports === 1 ? 'it' : 'them'}.
+              event still waiting for verification. This only affects the optional hazard-report
+              context; the alert, reach, shelter and relief metrics remain independently complete.
             </Alert>
           ) : null}
           {result.missingMetrics.length > 0 ? (
@@ -384,7 +396,7 @@ function EventAnalytics({ event }: { event: DisasterEvent }) {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(5, 1fr)' },
+          gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' },
           gap: 2,
         }}>
         {result.metrics.map((m) => (
@@ -395,15 +407,40 @@ function EventAnalytics({ event }: { event: DisasterEvent }) {
       {/* Charts */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 3 }}>
         <ChartCard
-          title="Reports by day"
-          subtitle="Hazard reports linked to this event"
-          table={{ columns: ['Day', 'Reports'], rows: byDay.map((d) => [d.day, d.count]) }}>
-          <ReportsByDayChart data={byDay} />
+          title="Alert timeline"
+          subtitle="Official alerts issued by day and threat level"
+          table={{
+            columns: ['Day', 'High', 'Medium', 'Advisory'],
+            rows: alertTimeline.map((d) => [d.day, d.high, d.medium, d.advisory]),
+          }}>
+          <AlertTimelineChart data={alertTimeline} />
         </ChartCard>
         <ChartCard
-          title="Reports by hazard type"
-          table={{ columns: ['Hazard', 'Reports'], rows: byHazard.map((d) => [d.label, d.count]) }}>
-          <CountBarChart data={byHazard} valueLabel="Reports" />
+          title="Shelter occupancy over time"
+          subtitle="Historical event occupancy against activated capacity"
+          table={{
+            columns: ['Day', 'Occupied', 'Capacity', 'Rate'],
+            rows: occupancyTimeline.map((d) => [d.day, d.occupancy, d.capacity, `${d.rate}%`]),
+          }}>
+          <ShelterOccupancyTimelineChart data={occupancyTimeline} />
+        </ChartCard>
+        <ChartCard
+          title="Citizen reach by GS division"
+          subtitle="Unique citizens reached by official alerts"
+          table={{
+            columns: ['GS division', 'Citizens'],
+            rows: reachByDivision.map((d) => [d.label, d.count]),
+          }}>
+          <CountBarChart data={reachByDivision} valueLabel="Citizens" />
+        </ChartCard>
+        <ChartCard
+          title={`Resource Distribution – ${event.district}`}
+          subtitle="Relief items distributed during the event"
+          table={{
+            columns: ['Resource', 'Quantity'],
+            rows: resourceCategories.map((d) => [d.label, d.count]),
+          }}>
+          <CountBarChart data={resourceCategories} valueLabel="Quantity" />
         </ChartCard>
         <ChartCard
           title="Verification outcomes"
@@ -413,14 +450,16 @@ function EventAnalytics({ event }: { event: DisasterEvent }) {
           <CountBarChart data={outcomes} valueLabel="Reports" />
         </ChartCard>
         <ChartCard
-          title="Shelter occupancy by district"
-          subtitle="Open shelters, current occupancy against capacity"
-          table={{
-            columns: ['District', 'Occupied', 'Capacity', 'Rate'],
-            rows: occupancy.map((d) => [d.district, d.occupancy, d.capacity, `${d.rate}%`]),
-          }}
-          empty={shelters === null ? 'Shelter data could not be loaded.' : 'No open shelters.'}>
-          <OccupancyChart data={occupancy} />
+          title="Hazard reports by day"
+          subtitle="Optional operational context linked to this event"
+          table={{ columns: ['Day', 'Reports'], rows: byDay.map((d) => [d.day, d.count]) }}>
+          <ReportsByDayChart data={byDay} />
+        </ChartCard>
+        <ChartCard
+          title="Reports by hazard type"
+          subtitle="Optional operational context"
+          table={{ columns: ['Hazard', 'Reports'], rows: byHazard.map((d) => [d.label, d.count]) }}>
+          <CountBarChart data={byHazard} valueLabel="Reports" />
         </ChartCard>
       </Box>
 
@@ -515,7 +554,8 @@ function EventAnalytics({ event }: { event: DisasterEvent }) {
                   <StatusChip presentation={DISASTER_REPORT_STATUS_PRESENTATION[r.status]} />
                   <Typography variant="body2">{formatDateTime(r.generatedAt)}</Typography>
                   <Typography variant="body2" color="textSecondary">
-                    {r.metrics.reportsReceived} reports · {r.metrics.allocatedEvacuees} evacuees
+                    {r.metrics.alertsIssued ?? 0} alerts · {r.metrics.resourcesDistributed ?? 0}{' '}
+                    resource units
                     {r.missingMetrics.length > 0 ? ` · ${r.missingMetrics.length} incomplete` : ''}
                   </Typography>
                   {r.exportedUrl ? (

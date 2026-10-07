@@ -26,6 +26,10 @@ import {
   type VerificationDecision,
   type VerificationOutcome,
   type WarningRequest,
+  type EventAlert,
+  type CitizenReachRecord,
+  type ShelterOccupancySnapshot,
+  type ResourceDistribution,
 } from '@lankashield/shared';
 import { converters } from '@lankashield/shared/firestore';
 import { initializeApp } from 'firebase/app';
@@ -322,10 +326,10 @@ const REPORTS: ReportSpec[] = [
   {
     n: 8,
     reporter: 'citizen',
-    hazardType: 'FLOOD',
+    hazardType: 'LANDSLIDE',
     severity: 'MODERATE',
-    title: 'Drains overflowing in Horana town',
-    description: 'Storm drains are overflowing onto the main street in Horana.',
+    title: 'Unstable slope near Horana estate road',
+    description: 'Loose soil and small rocks are falling onto the estate road after continuous rain.',
     district: 'Kalutara',
     latitude: 6.7159,
     longitude: 80.0626,
@@ -333,7 +337,7 @@ const REPORTS: ReportSpec[] = [
     review: {
       outcome: 'VERIFIED_INFO',
       eventId: KAL_2025,
-      remarks: 'Verified with the local Grama Niladhari.',
+      remarks: 'Slope instability verified with the local Grama Niladhari.',
       delivery: 'FAILED',
     },
   },
@@ -620,6 +624,416 @@ const ALLOCATIONS: {
   },
 ];
 
+const EVENT_ALERTS: EventAlert[] = [
+  ...[
+    ['2025-05-20', 'ADVISORY'],
+    ['2025-05-21', 'MEDIUM'],
+    ['2025-05-22', 'HIGH'],
+    ['2025-05-23', 'HIGH'],
+    ['2025-05-24', 'MEDIUM'],
+    ['2025-05-25', 'ADVISORY'],
+  ].map(([day, level], i) => ({
+    alertId: `EA-RAT25-${i + 1}`,
+    disasterEventId: RAT_2025,
+    level: level as EventAlert['level'],
+    district: 'Ratnapura' as const,
+    issuedAt: `${day}T06:00:00.000Z`,
+    acknowledged: true,
+  })),
+  ...[
+    ['2025-11-03', 'ADVISORY'],
+    ['2025-11-04', 'MEDIUM'],
+    ['2025-11-04', 'HIGH'],
+    ['2025-11-05', 'HIGH'],
+    ['2025-11-05', 'HIGH'],
+    ['2025-11-06', 'HIGH'],
+    ['2025-11-06', 'MEDIUM'],
+    ['2025-11-07', 'MEDIUM'],
+    ['2025-11-08', 'ADVISORY'],
+    ['2025-11-09', 'ADVISORY'],
+    ['2025-11-10', 'ADVISORY'],
+    ['2025-11-11', 'ADVISORY'],
+  ].map(([day, level], i) => ({
+    alertId: `EA-KAL25-${i + 1}`,
+    disasterEventId: KAL_2025,
+    level: level as EventAlert['level'],
+    district: 'Kalutara' as const,
+    issuedAt: `${day}T06:00:00.000Z`,
+    acknowledged: true,
+  })),
+  ...[
+    ['2026-10-01', 'ADVISORY'],
+    ['2026-10-02', 'HIGH'],
+    ['2026-10-03', 'MEDIUM'],
+    ['2026-10-04', 'HIGH'],
+    ['2026-10-05', 'MEDIUM'],
+    ['2026-10-06', 'ADVISORY'],
+  ].map(([day, level], i) => ({
+    alertId: `EA-RAT26-${i + 1}`,
+    disasterEventId: RAT_2026,
+    level: level as EventAlert['level'],
+    district: 'Ratnapura' as const,
+    issuedAt: `${day}T06:00:00.000Z`,
+    acknowledged: i < 2,
+  })),
+];
+
+const CITIZEN_REACH: CitizenReachRecord[] = [
+  {
+    reachId: 'CR-KAL-HOR',
+    disasterEventId: KAL_2025,
+    district: 'Kalutara',
+    gsDivision: 'Horana',
+    citizensReached: 1100,
+    recordedAt: '2025-11-11T12:00:00.000Z',
+  },
+  {
+    reachId: 'CR-KAL-AGA',
+    disasterEventId: KAL_2025,
+    district: 'Kalutara',
+    gsDivision: 'Agalawatta',
+    citizensReached: 900,
+    recordedAt: '2025-11-11T12:00:00.000Z',
+  },
+  {
+    reachId: 'CR-KAL-BUL',
+    disasterEventId: KAL_2025,
+    district: 'Kalutara',
+    gsDivision: 'Bulathsinhala',
+    citizensReached: 850,
+    recordedAt: '2025-11-11T12:00:00.000Z',
+  },
+  {
+    reachId: 'CR-KAL-MAT',
+    disasterEventId: KAL_2025,
+    district: 'Kalutara',
+    gsDivision: 'Matugama',
+    citizensReached: 550,
+    recordedAt: '2025-11-11T12:00:00.000Z',
+  },
+  {
+    reachId: 'CR-RAT25',
+    disasterEventId: RAT_2025,
+    district: 'Ratnapura',
+    gsDivision: 'Ratnapura Town',
+    citizensReached: 1200,
+    recordedAt: '2025-05-29T12:00:00.000Z',
+  },
+  {
+    reachId: 'CR-RAT25-KUR',
+    disasterEventId: RAT_2025,
+    district: 'Ratnapura',
+    gsDivision: 'Kuruwita',
+    citizensReached: 850,
+    recordedAt: '2025-05-29T12:00:00.000Z',
+  },
+  {
+    reachId: 'CR-RAT25-PEL',
+    disasterEventId: RAT_2025,
+    district: 'Ratnapura',
+    gsDivision: 'Pelmadulla',
+    citizensReached: 620,
+    recordedAt: '2025-05-29T12:00:00.000Z',
+  },
+  {
+    reachId: 'CR-RAT25-EHE',
+    disasterEventId: RAT_2025,
+    district: 'Ratnapura',
+    gsDivision: 'Eheliyagoda',
+    citizensReached: 480,
+    recordedAt: '2025-05-29T12:00:00.000Z',
+  },
+  {
+    reachId: 'CR-RAT26',
+    disasterEventId: RAT_2026,
+    district: 'Ratnapura',
+    gsDivision: 'Ratnapura Town',
+    citizensReached: 900,
+    recordedAt: '2026-10-04T12:00:00.000Z',
+  },
+  {
+    reachId: 'CR-RAT26-ELA',
+    disasterEventId: RAT_2026,
+    district: 'Ratnapura',
+    gsDivision: 'Elapatha',
+    citizensReached: 560,
+    recordedAt: '2026-10-05T12:00:00.000Z',
+  },
+  {
+    reachId: 'CR-RAT26-KIR',
+    disasterEventId: RAT_2026,
+    district: 'Ratnapura',
+    gsDivision: 'Kiriella',
+    citizensReached: 440,
+    recordedAt: '2026-10-05T12:00:00.000Z',
+  },
+];
+
+const OCCUPANCY_HISTORY: ShelterOccupancySnapshot[] = [];
+for (const [day, horana, agalawatta] of [
+  ['2025-11-04', 35, 20],
+  ['2025-11-05', 90, 55],
+  ['2025-11-06', 150, 115],
+  ['2025-11-07', 120, 90],
+  ['2025-11-08', 60, 40],
+] as const) {
+  OCCUPANCY_HISTORY.push(
+    {
+      snapshotId: `OS-KAL-${day}-4`,
+      disasterEventId: KAL_2025,
+      shelterId: 'SH-SEED-004',
+      district: 'Kalutara',
+      occupancy: horana,
+      capacity: 200,
+      recordedAt: `${day}T18:00:00.000Z`,
+    },
+    {
+      snapshotId: `OS-KAL-${day}-5`,
+      disasterEventId: KAL_2025,
+      shelterId: 'SH-SEED-005',
+      district: 'Kalutara',
+      occupancy: agalawatta,
+      capacity: 120,
+      recordedAt: `${day}T18:00:00.000Z`,
+    },
+  );
+}
+OCCUPANCY_HISTORY.push(
+  {
+    snapshotId: 'OS-RAT25',
+    disasterEventId: RAT_2025,
+    shelterId: 'SH-SEED-001',
+    district: 'Ratnapura',
+    occupancy: 240,
+    capacity: 300,
+    recordedAt: '2025-05-23T18:00:00.000Z',
+  },
+  {
+    snapshotId: 'OS-RAT25-2025-05-23-2',
+    disasterEventId: RAT_2025,
+    shelterId: 'SH-SEED-002',
+    district: 'Ratnapura',
+    occupancy: 135,
+    capacity: 150,
+    recordedAt: '2025-05-23T18:00:00.000Z',
+  },
+  {
+    snapshotId: 'OS-RAT26',
+    disasterEventId: RAT_2026,
+    shelterId: 'SH-SEED-001',
+    district: 'Ratnapura',
+    occupancy: 210,
+    capacity: 300,
+    recordedAt: '2026-10-04T18:00:00.000Z',
+  },
+  {
+    snapshotId: 'OS-RAT26-2026-10-04-2',
+    disasterEventId: RAT_2026,
+    shelterId: 'SH-SEED-002',
+    district: 'Ratnapura',
+    occupancy: 125,
+    capacity: 150,
+    recordedAt: '2026-10-04T18:00:00.000Z',
+  },
+  {
+    snapshotId: 'OS-RAT26-2026-10-04-3',
+    disasterEventId: RAT_2026,
+    shelterId: 'SH-SEED-003',
+    district: 'Ratnapura',
+    occupancy: 80,
+    capacity: 80,
+    recordedAt: '2026-10-04T18:00:00.000Z',
+  },
+);
+
+for (const [day, central, sivali] of [
+  ['2025-05-21', 70, 35],
+  ['2025-05-22', 160, 80],
+  ['2025-05-24', 210, 120],
+  ['2025-05-25', 140, 75],
+] as const) {
+  OCCUPANCY_HISTORY.push(
+    {
+      snapshotId: `OS-RAT25-${day}-1`,
+      disasterEventId: RAT_2025,
+      shelterId: 'SH-SEED-001',
+      district: 'Ratnapura',
+      occupancy: central,
+      capacity: 300,
+      recordedAt: `${day}T18:00:00.000Z`,
+    },
+    {
+      snapshotId: `OS-RAT25-${day}-2`,
+      disasterEventId: RAT_2025,
+      shelterId: 'SH-SEED-002',
+      district: 'Ratnapura',
+      occupancy: sivali,
+      capacity: 150,
+      recordedAt: `${day}T18:00:00.000Z`,
+    },
+  );
+}
+
+for (const [day, central, sivali, kuruwita] of [
+  ['2026-10-02', 90, 55, 25],
+  ['2026-10-03', 155, 95, 60],
+  ['2026-10-05', 180, 125, 80],
+  ['2026-10-06', 145, 105, 65],
+] as const) {
+  OCCUPANCY_HISTORY.push(
+    {
+      snapshotId: `OS-RAT26-${day}-1`,
+      disasterEventId: RAT_2026,
+      shelterId: 'SH-SEED-001',
+      district: 'Ratnapura',
+      occupancy: central,
+      capacity: 300,
+      recordedAt: `${day}T18:00:00.000Z`,
+    },
+    {
+      snapshotId: `OS-RAT26-${day}-2`,
+      disasterEventId: RAT_2026,
+      shelterId: 'SH-SEED-002',
+      district: 'Ratnapura',
+      occupancy: sivali,
+      capacity: 150,
+      recordedAt: `${day}T18:00:00.000Z`,
+    },
+    {
+      snapshotId: `OS-RAT26-${day}-3`,
+      disasterEventId: RAT_2026,
+      shelterId: 'SH-SEED-003',
+      district: 'Ratnapura',
+      occupancy: kuruwita,
+      capacity: 80,
+      recordedAt: `${day}T18:00:00.000Z`,
+    },
+  );
+}
+
+const RESOURCE_DISTRIBUTIONS: ResourceDistribution[] = [
+  {
+    distributionId: 'RD-KAL-1',
+    disasterEventId: KAL_2025,
+    district: 'Kalutara',
+    category: 'FOOD_PACK',
+    quantity: 120,
+    distributedAt: '2025-11-05T10:00:00.000Z',
+  },
+  {
+    distributionId: 'RD-KAL-2',
+    disasterEventId: KAL_2025,
+    district: 'Kalutara',
+    category: 'WATER_KIT',
+    quantity: 80,
+    distributedAt: '2025-11-06T10:00:00.000Z',
+  },
+  {
+    distributionId: 'RD-KAL-3',
+    disasterEventId: KAL_2025,
+    district: 'Kalutara',
+    category: 'MEDICAL_KIT',
+    quantity: 50,
+    distributedAt: '2025-11-07T10:00:00.000Z',
+  },
+  {
+    distributionId: 'RD-KAL-4',
+    disasterEventId: KAL_2025,
+    district: 'Kalutara',
+    category: 'HYGIENE_KIT',
+    quantity: 40,
+    distributedAt: '2025-11-08T10:00:00.000Z',
+  },
+  {
+    distributionId: 'RD-KAL-5',
+    disasterEventId: KAL_2025,
+    district: 'Kalutara',
+    category: 'BLANKET',
+    quantity: 30,
+    distributedAt: '2025-11-09T10:00:00.000Z',
+  },
+  {
+    distributionId: 'RD-RAT25',
+    disasterEventId: RAT_2025,
+    district: 'Ratnapura',
+    category: 'FOOD_PACK',
+    quantity: 240,
+    distributedAt: '2025-05-23T10:00:00.000Z',
+  },
+  {
+    distributionId: 'RD-RAT25-WATER',
+    disasterEventId: RAT_2025,
+    district: 'Ratnapura',
+    category: 'WATER_KIT',
+    quantity: 180,
+    distributedAt: '2025-05-24T10:00:00.000Z',
+  },
+  {
+    distributionId: 'RD-RAT25-MEDICAL',
+    disasterEventId: RAT_2025,
+    district: 'Ratnapura',
+    category: 'MEDICAL_KIT',
+    quantity: 90,
+    distributedAt: '2025-05-24T11:00:00.000Z',
+  },
+  {
+    distributionId: 'RD-RAT25-HYGIENE',
+    disasterEventId: RAT_2025,
+    district: 'Ratnapura',
+    category: 'HYGIENE_KIT',
+    quantity: 75,
+    distributedAt: '2025-05-25T10:00:00.000Z',
+  },
+  {
+    distributionId: 'RD-RAT25-BLANKET',
+    disasterEventId: RAT_2025,
+    district: 'Ratnapura',
+    category: 'BLANKET',
+    quantity: 60,
+    distributedAt: '2025-05-25T11:00:00.000Z',
+  },
+  {
+    distributionId: 'RD-RAT26',
+    disasterEventId: RAT_2026,
+    district: 'Ratnapura',
+    category: 'WATER_KIT',
+    quantity: 220,
+    distributedAt: '2026-10-03T10:00:00.000Z',
+  },
+  {
+    distributionId: 'RD-RAT26-FOOD',
+    disasterEventId: RAT_2026,
+    district: 'Ratnapura',
+    category: 'FOOD_PACK',
+    quantity: 280,
+    distributedAt: '2026-10-03T11:00:00.000Z',
+  },
+  {
+    distributionId: 'RD-RAT26-MEDICAL',
+    disasterEventId: RAT_2026,
+    district: 'Ratnapura',
+    category: 'MEDICAL_KIT',
+    quantity: 110,
+    distributedAt: '2026-10-04T10:00:00.000Z',
+  },
+  {
+    distributionId: 'RD-RAT26-HYGIENE',
+    disasterEventId: RAT_2026,
+    district: 'Ratnapura',
+    category: 'HYGIENE_KIT',
+    quantity: 95,
+    distributedAt: '2026-10-05T10:00:00.000Z',
+  },
+  {
+    distributionId: 'RD-RAT26-BLANKET',
+    disasterEventId: RAT_2026,
+    district: 'Ratnapura',
+    category: 'BLANKET',
+    quantity: 70,
+    distributedAt: '2026-10-05T11:00:00.000Z',
+  },
+];
+
 // ---------------------------------------------------------------------------------------------
 // Build documents
 // ---------------------------------------------------------------------------------------------
@@ -768,7 +1182,19 @@ function buildDocuments(uids: Record<DemoUserKey, string>) {
     };
   });
 
-  return { users, hazardReports, decisions, warnings, notifications, allocations, shelters };
+  return {
+    users,
+    hazardReports,
+    decisions,
+    warnings,
+    notifications,
+    allocations,
+    shelters,
+    eventAlerts: EVENT_ALERTS,
+    citizenReach: CITIZEN_REACH,
+    occupancyHistory: OCCUPANCY_HISTORY,
+    resourceDistributions: RESOURCE_DISTRIBUTIONS,
+  };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -835,6 +1261,20 @@ async function main() {
     data.allocations,
     (a) => a.allocationId,
   );
+  setAll(COLLECTIONS.eventAlerts, converters.eventAlerts, data.eventAlerts, (a) => a.alertId);
+  setAll(COLLECTIONS.citizenReach, converters.citizenReach, data.citizenReach, (r) => r.reachId);
+  setAll(
+    COLLECTIONS.shelterOccupancyHistory,
+    converters.shelterOccupancyHistory,
+    data.occupancyHistory,
+    (s) => s.snapshotId,
+  );
+  setAll(
+    COLLECTIONS.resourceDistributions,
+    converters.resourceDistributions,
+    data.resourceDistributions,
+    (r) => r.distributionId,
+  );
 
   await batch.commit();
 
@@ -847,6 +1287,10 @@ async function main() {
     notifications: data.notifications.length,
     shelters: data.shelters.length,
     shelterAllocations: data.allocations.length,
+    eventAlerts: data.eventAlerts.length,
+    citizenReach: data.citizenReach.length,
+    shelterOccupancyHistory: data.occupancyHistory.length,
+    resourceDistributions: data.resourceDistributions.length,
   });
   console.log(`\n✔ Wrote ${writes} documents.`);
   console.log('\nDemo accounts (password = SEED_DEMO_PASSWORD):');
