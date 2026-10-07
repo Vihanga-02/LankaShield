@@ -1220,8 +1220,9 @@ Aim for meaningful coverage of core business logic rather than artificially test
 - Build with Vite.
 - Import the repository into Vercel and set `apps/dashboard` as the root directory.
 - Configure build command `npm run build` and output directory `dist`.
-- Add Firebase and Maps environment variables in Vercel. Vercel installs from the root `package-lock.json`, so the shared workspace package resolves.
+- Add the Firebase environment variables in Vercel (no Maps key is needed, D42). Vercel installs from the root `package-lock.json`, so the shared workspace package resolves.
 - Add the Vercel domain to Firebase Authentication authorised domains.
+- In `apps/dashboard/index.html`, change `og:image` and `twitter:image` from `/og-image.png` to the full deployed URL (`https://<vercel-domain>/og-image.png`); link previews need an absolute address.
 - Add a rewrite to `index.html` and verify direct React Router route refreshes.
 
 Use this `apps/dashboard/vercel.json` for the Vite single-page application:

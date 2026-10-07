@@ -5,20 +5,23 @@ const config: ExpoConfig = {
   slug: 'lankashield',
   version: '1.0.0',
   orientation: 'portrait',
-  icon: './assets/images/lankashield-logo.png',
+  // Generated from assets/images/lankashield-logo.png (the master logo).
+  icon: './assets/images/icon.png',
   scheme: 'lankashield',
   userInterfaceStyle: 'light',
   android: {
     package: 'lk.lankashield.mobile',
     adaptiveIcon: {
       backgroundColor: '#FFFFFF',
-      foregroundImage: './assets/images/lankashield-logo.png',
+      // The logo sits inside the launcher's safe zone, so circle and squircle masks never crop it.
+      foregroundImage: './assets/images/android-icon-foreground.png',
+      monochromeImage: './assets/images/android-icon-monochrome.png',
     },
     predictiveBackGestureEnabled: false,
   },
   web: {
     output: 'single',
-    favicon: './assets/images/lankashield-logo.png',
+    favicon: './assets/images/favicon.png',
   },
   plugins: [
     'expo-router',
@@ -26,8 +29,8 @@ const config: ExpoConfig = {
       'expo-splash-screen',
       {
         backgroundColor: '#FFFFFF',
-        image: './assets/images/lankashield-logo.png',
-        imageWidth: 76,
+        image: './assets/images/splash-icon.png',
+        imageWidth: 200,
       },
     ],
     [
