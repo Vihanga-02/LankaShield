@@ -1,4 +1,10 @@
-import type { DisasterReportStatus, HazardReportStatus, ShelterStatus, SyncStatus } from '../enums';
+import type {
+  DeliveryStatus,
+  DisasterReportStatus,
+  HazardReportStatus,
+  ShelterStatus,
+  SyncStatus,
+} from '../enums';
 import type { ColorToken } from './theme';
 
 /** Visual presentation of a status (§5.3). Always render the label with the colour. */
@@ -36,3 +42,10 @@ export const DISASTER_REPORT_STATUS_PRESENTATION: Record<DisasterReportStatus, S
     PROVISIONAL: { label: 'Provisional Report', color: 'warning' },
     FINAL: { label: 'Final Report', color: 'success' },
   };
+
+/** Notification delivery (Phase 10). Only SENT notifications reach the recipient's app. */
+export const DELIVERY_STATUS_PRESENTATION: Record<DeliveryStatus, StatusPresentation> = {
+  SENT: { label: 'Sent', color: 'success' },
+  PENDING: { label: 'Pending', color: 'warning' },
+  FAILED: { label: 'Failed', color: 'danger' },
+};

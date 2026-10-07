@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import {
+  activeWarnings,
   colors,
   layout,
   radius,
@@ -17,14 +18,20 @@ import { LoadingState } from '@/components/feedback/LoadingState';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { ReportCard } from '@/features/hazard-reports/components/ReportCard';
 import { useMyReports } from '@/features/hazard-reports/hooks/useMyReports';
+import { NotificationCard } from '@/features/notifications/components/NotificationCard';
+import { openNotification } from '@/features/notifications/openNotification';
 import { SyncBanner } from '@/features/offline-sync/components/SyncBanner';
 import { useAuthStore } from '@/store/authStore';
+import { useNotificationsStore } from '@/store/notificationsStore';
 
 export default function HomeScreen() {
   const user = useAuthStore((s) => s.user);
   const firstName = user?.fullName.split(' ')[0] ?? '';
   const { state, retry } = useMyReports();
   const recent = state.status === 'success' ? state.data.slice(0, 3) : [];
+  const notificationsStatus = useNotificationsStore((s) => s.status);
+  const notifications = useNotificationsStore((s) => s.items);
+  const warnings = activeWarnings(notifications);
 
   return (
     <ScreenContainer scroll>
@@ -63,12 +70,29 @@ export default function HomeScreen() {
         </Button>
       </View>
 
-      <Text variant="titleMedium">Active warnings</Text>
-      <EmptyState
-        icon="shield-check-outline"
-        title="No active warnings"
-        message="Official warnings for your area will appear here."
-      />
+      <View style={styles.sectionHeader}>
+        <Text variant="titleMedium">Active warnings</Text>
+        {warnings.length > 0 ? (
+          <Button compact onPress={() => router.navigate('/notifications')}>
+            All notifications
+          </Button>
+        ) : null}
+      </View>
+      {notificationsStatus === 'success' && warnings.length === 0 ? (
+        <EmptyState
+          icon="shield-check-outline"
+          title="No active warnings"
+          message="Official warnings for your area will appear here."
+        />
+      ) : null}
+      {/* Opening a warning marks it read, so it leaves this list but stays in Notifications. */}
+      {warnings.map((warning) => (
+        <NotificationCard
+          key={warning.notificationId}
+          notification={warning}
+          onPress={() => openNotification(warning, () => router.navigate('/notifications'))}
+        />
+      ))}
 
       <View style={styles.sectionHeader}>
         <Text variant="titleMedium">Recent reports</Text>

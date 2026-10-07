@@ -6,10 +6,12 @@ import {
   SEVERITY_LABELS,
   spacing,
   toErrorMessage,
+  unreadResultIdsForReport,
   type HazardReport,
 } from '@lankashield/shared';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Divider, List, Text } from 'react-native-paper';
 
@@ -20,6 +22,8 @@ import { OsmMap } from '@/components/maps/OsmMap';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useHazardReport } from '@/features/hazard-reports/hooks/useHazardReport';
+import { markNotificationsRead } from '@/features/notifications/notifications.service';
+import { useNotificationsStore } from '@/store/notificationsStore';
 import { formatDateTime } from '@/utils/time';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -122,6 +126,14 @@ function ReportDetails({ report }: { report: HazardReport }) {
 export default function ReportDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { state, retry } = useHazardReport(id);
+
+  // Seeing the report counts as reading its verification-result notification (Phase 10).
+  const unreadResults = useNotificationsStore((s) =>
+    unreadResultIdsForReport(s.items, id).join(','),
+  );
+  useEffect(() => {
+    if (unreadResults) void markNotificationsRead(unreadResults.split(',')).catch(() => {});
+  }, [unreadResults]);
 
   return (
     <ScreenContainer scroll edges={['bottom']}>
