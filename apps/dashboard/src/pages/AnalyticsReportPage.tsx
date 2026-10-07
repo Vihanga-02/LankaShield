@@ -392,6 +392,74 @@ function EventAnalytics({ event }: { event: DisasterEvent }) {
         </CardContent>
       </Card>
 
+      {/* Save, export, share */}
+      <Card>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            Save, export and share
+          </Typography>
+          {actionError ? (
+            <Alert
+              severity="error"
+              sx={{ mb: 2 }}
+              action={
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={
+                    actionError.action === 'export'
+                      ? onExport
+                      : actionError.action === 'save'
+                        ? onSave
+                        : onShare
+                  }>
+                  Retry
+                </Button>
+              }>
+              {actionError.action === 'export' ? 'PDF export failed. ' : ''}
+              {actionError.message} The analysis above is kept — nothing needs to be recalculated.
+            </Alert>
+          ) : null}
+          <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1.5, alignItems: 'center' }}>
+            <Button
+              variant="outlined"
+              startIcon={<SaveOutlined />}
+              onClick={onSave}
+              disabled={!!busy || !!savedId}>
+              {savedId ? 'Saved' : busy === 'saving' ? 'Saving…' : 'Save report'}
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<PictureAsPdfOutlined />}
+              onClick={onExport}
+              disabled={!!busy}>
+              {busy === 'exporting' ? 'Exporting…' : 'Export PDF'}
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<ShareOutlined />}
+              onClick={() => setShareOpen(true)}
+              disabled={!!busy || !savedId || !isFinal}>
+              Share with donor
+            </Button>
+            {currentExportUrl ? (
+              <Link
+                href={currentExportUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="body2">
+                Open stored PDF
+              </Link>
+            ) : null}
+          </Stack>
+          <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mt: 1 }}>
+            {isFinal
+              ? 'Save the report first; only authorised final reports can be shared with donor organisations.'
+              : 'Provisional reports can be saved and exported but not shared with donors.'}
+          </Typography>
+        </CardContent>
+      </Card>
+
       {/* Metrics */}
       <Box
         sx={{
@@ -462,74 +530,6 @@ function EventAnalytics({ event }: { event: DisasterEvent }) {
           <CountBarChart data={byHazard} valueLabel="Reports" />
         </ChartCard>
       </Box>
-
-      {/* Save, export, share */}
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Save, export and share
-          </Typography>
-          {actionError ? (
-            <Alert
-              severity="error"
-              sx={{ mb: 2 }}
-              action={
-                <Button
-                  color="inherit"
-                  size="small"
-                  onClick={
-                    actionError.action === 'export'
-                      ? onExport
-                      : actionError.action === 'save'
-                        ? onSave
-                        : onShare
-                  }>
-                  Retry
-                </Button>
-              }>
-              {actionError.action === 'export' ? 'PDF export failed. ' : ''}
-              {actionError.message} The analysis above is kept — nothing needs to be recalculated.
-            </Alert>
-          ) : null}
-          <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1.5, alignItems: 'center' }}>
-            <Button
-              variant="outlined"
-              startIcon={<SaveOutlined />}
-              onClick={onSave}
-              disabled={!!busy || !!savedId}>
-              {savedId ? 'Saved' : busy === 'saving' ? 'Saving…' : 'Save report'}
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<PictureAsPdfOutlined />}
-              onClick={onExport}
-              disabled={!!busy}>
-              {busy === 'exporting' ? 'Exporting…' : 'Export PDF'}
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<ShareOutlined />}
-              onClick={() => setShareOpen(true)}
-              disabled={!!busy || !savedId || !isFinal}>
-              Share with donor
-            </Button>
-            {currentExportUrl ? (
-              <Link
-                href={currentExportUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                variant="body2">
-                Open stored PDF
-              </Link>
-            ) : null}
-          </Stack>
-          <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mt: 1 }}>
-            {isFinal
-              ? 'Save the report first; only authorised final reports can be shared with donor organisations.'
-              : 'Provisional reports can be saved and exported but not shared with donors.'}
-          </Typography>
-        </CardContent>
-      </Card>
 
       {/* History */}
       <Card>
