@@ -115,7 +115,7 @@ export function ShelterFormDialog({
 
   return (
     <Dialog open onClose={busy ? undefined : onClose} maxWidth="md" fullWidth>
-      <DialogTitle sx={{ py: 1 }}>
+      <DialogTitle sx={{ py: 1, color: 'primary.main' }}>
         {editing ? `Edit ${shelter.name}` : 'Register shelter'}
       </DialogTitle>
       <DialogContent dividers sx={{ py: 1 }}>
