@@ -7,6 +7,7 @@ import {
   type ShelterStatus,
 } from '@lankashield/shared';
 import AddOutlined from '@mui/icons-material/AddOutlined';
+import ClearOutlined from '@mui/icons-material/ClearOutlined';
 import EditOutlined from '@mui/icons-material/EditOutlined';
 import HolidayVillageOutlined from '@mui/icons-material/HolidayVillageOutlined';
 import SearchOutlined from '@mui/icons-material/SearchOutlined';
@@ -156,6 +157,13 @@ export default function SheltersPage() {
   );
   const districts = [...new Set(shelters.map((s) => s.district))].sort();
   const activeEvents = events.state.status === 'success' ? events.state.data : [];
+  const hasFilters = Boolean(search || district || status);
+
+  const clearFilters = () => {
+    setSearch('');
+    setDistrict('');
+    setStatus('');
+  };
 
   return (
     <>
@@ -258,6 +266,14 @@ export default function SheltersPage() {
                   </MenuItem>
                 ))}
               </TextField>
+              <Button
+                size="small"
+                variant="text"
+                startIcon={<ClearOutlined />}
+                onClick={clearFilters}
+                disabled={!hasFilters}>
+                Clear filters
+              </Button>
             </Stack>
           </Card>
 

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { isWithinSriLanka } from '../rules/location';
 import { districtSchema, geoPointSchema, optionalPhoneSchema } from './common';
 
 /** UC03 register/edit shelter form. */
@@ -16,7 +17,9 @@ export const shelterInputSchema = z
       .trim()
       .min(5, { error: 'Enter the shelter address.' })
       .max(200, { error: 'Address must be 200 characters or fewer.' }),
-    location: geoPointSchema,
+    location: geoPointSchema.refine(isWithinSriLanka, {
+      error: 'Select a location within Sri Lanka.',
+    }),
     capacity: z
       .number({ error: 'Enter the shelter capacity.' })
       .int({ error: 'Capacity must be a whole number.' })

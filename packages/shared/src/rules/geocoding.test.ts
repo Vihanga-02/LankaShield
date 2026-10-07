@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  addressFromNominatim,
   districtFromNominatim,
+  lookupLocation,
   lookupDistrict,
+  nominatimLocationUrl,
   nominatimReverseUrl,
   type FetchLike,
 } from './geocoding';
@@ -23,6 +26,10 @@ const MONARAGALA = {
     'ISO3166-2-lvl5': 'LK-82',
     country_code: 'lk',
   },
+};
+const RATNAPURA_LOCATION = {
+  ...RATNAPURA,
+  display_name: 'Main Street, Ratnapura, Ratnapura District, Sabaragamuwa Province, Sri Lanka',
 };
 
 const respond =
@@ -86,5 +93,26 @@ describe('lookupDistrict', () => {
     await expect(
       lookupDistrict(ratnapura, { fetchFn: failing, minIntervalMs: 0 }),
     ).resolves.toBeUndefined();
+  });
+});
+
+describe('lookupLocation', () => {
+  const ratnapura = { latitude: 6.6828, longitude: 80.3992 };
+
+  it('builds a detailed reverse-geocoding URL', () => {
+    expect(nominatimLocationUrl(ratnapura)).toContain('zoom=18');
+  });
+
+  it('returns the address and district for a point in Sri Lanka', async () => {
+    await expect(
+      lookupLocation(ratnapura, { fetchFn: respond(RATNAPURA_LOCATION), minIntervalMs: 0 }),
+    ).resolves.toEqual({
+      address: RATNAPURA_LOCATION.display_name,
+      district: 'Ratnapura',
+    });
+  });
+
+  it('does not return incomplete details', () => {
+    expect(addressFromNominatim(RATNAPURA)).toBeUndefined();
   });
 });

@@ -7,7 +7,6 @@ import { SRI_LANKA_CENTER, SRI_LANKA_ZOOM, toLatLng } from './config';
 import { MapFrame } from './MapFrame';
 import { pinIcon } from './markers';
 
-// Six decimals is about 10 cm — plenty for a shelter or hazard location.
 const round6 = (n: number) => Math.round(n * 1e6) / 1e6;
 const pointFrom = (lat: number, lng: number): GeoPoint => ({
   latitude: round6(lat),
@@ -21,7 +20,6 @@ function ClickToPick({ onPick }: { onPick: (point: GeoPoint) => void }) {
   return null;
 }
 
-/** Brings the pin into view when the point changes from outside the map (typed coordinates). */
 function FollowPoint({ point, zoom }: { point?: GeoPoint; zoom: number }) {
   const map = useMap();
   const hadPoint = useRef(!!point);
@@ -35,10 +33,6 @@ function FollowPoint({ point, zoom }: { point?: GeoPoint; zoom: number }) {
   return null;
 }
 
-/**
- * One location on an OpenStreetMap map. With `onPick`, clicking the map or dragging the pin moves
- * it (shelter location); without it, the map just shows the point (report review).
- */
 export function PointMap({
   point,
   onPick,

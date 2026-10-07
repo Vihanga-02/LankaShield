@@ -5,22 +5,20 @@ const config: ExpoConfig = {
   slug: 'lankashield',
   version: '1.0.0',
   orientation: 'portrait',
-  icon: './assets/images/icon.png',
+  icon: './assets/images/lankashield-logo.png',
   scheme: 'lankashield',
   userInterfaceStyle: 'light',
   android: {
     package: 'lk.lankashield.mobile',
     adaptiveIcon: {
       backgroundColor: '#FFFFFF',
-      foregroundImage: './assets/images/android-icon-foreground.png',
-      backgroundImage: './assets/images/android-icon-background.png',
-      monochromeImage: './assets/images/android-icon-monochrome.png',
+      foregroundImage: './assets/images/lankashield-logo.png',
     },
     predictiveBackGestureEnabled: false,
   },
   web: {
-    output: 'static',
-    favicon: './assets/images/favicon.png',
+    output: 'single',
+    favicon: './assets/images/lankashield-logo.png',
   },
   plugins: [
     'expo-router',
@@ -28,7 +26,7 @@ const config: ExpoConfig = {
       'expo-splash-screen',
       {
         backgroundColor: '#FFFFFF',
-        image: './assets/images/splash-icon.png',
+        image: './assets/images/lankashield-logo.png',
         imageWidth: 76,
       },
     ],
