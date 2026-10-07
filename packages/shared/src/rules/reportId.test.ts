@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isWithinSriLanka, matchDistrict } from './location';
+import { districtMapCenter, isWithinSriLanka, matchDistrict } from './location';
 import { evidenceIdFor, generateReportId, REPORT_ID_PATTERN } from './reportId';
 
 describe('generateReportId', () => {
@@ -47,5 +47,12 @@ describe('isWithinSriLanka', () => {
     expect(isWithinSriLanka({ latitude: 6.6828, longitude: 80.3992 })).toBe(true);
     expect(isWithinSriLanka({ latitude: 9.6615, longitude: 80.0255 })).toBe(true);
     expect(isWithinSriLanka({ latitude: 37.422, longitude: -122.084 })).toBe(false);
+  });
+});
+
+describe('districtMapCenter', () => {
+  it('returns a Sri Lankan starting point for a selected district', () => {
+    expect(districtMapCenter('Ratnapura')).toEqual({ latitude: 6.6828, longitude: 80.3992 });
+    expect(isWithinSriLanka(districtMapCenter('Jaffna'))).toBe(true);
   });
 });

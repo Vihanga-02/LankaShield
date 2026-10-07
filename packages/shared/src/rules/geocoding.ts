@@ -34,17 +34,24 @@ const ISO_DISTRICTS: Record<string, District> = {
   'LK-92': 'Kegalle',
 };
 
-export function nominatimReverseUrl({ latitude, longitude }: GeoPoint): string {
+function nominatimUrl({ latitude, longitude }: GeoPoint, zoom: number): string {
   const params = new URLSearchParams({
     format: 'jsonv2',
     lat: String(latitude),
     lon: String(longitude),
-    // Zoom 10 resolves to the district level ("state_district" in Sri Lanka).
-    zoom: '10',
+    zoom: String(zoom),
     addressdetails: '1',
     'accept-language': 'en',
   });
   return `${NOMINATIM_REVERSE_URL}?${params.toString()}`;
+}
+
+export function nominatimReverseUrl(point: GeoPoint): string {
+  return nominatimUrl(point, 10);
+}
+
+export function nominatimLocationUrl(point: GeoPoint): string {
+  return nominatimUrl(point, 18);
 }
 
 /**
@@ -63,34 +70,31 @@ export function districtFromNominatim(response: unknown): District | undefined {
   );
 }
 
+export function addressFromNominatim(response: unknown): string | undefined {
+  const displayName = (response as { display_name?: unknown } | null)?.display_name;
+  return typeof displayName === 'string' && displayName.trim() ? displayName : undefined;
+}
+
 /** Minimal `fetch` shape, so both apps (and tests) can pass their own. */
 export type FetchLike = (
   url: string,
   init?: { headers?: Record<string, string>; signal?: AbortSignal },
 ) => Promise<{ ok: boolean; json(): Promise<unknown> }>;
 
+export interface LookupOptions {
+  fetchFn?: FetchLike;
+  headers?: Record<string, string>;
+  timeoutMs?: number;
+  minIntervalMs?: number;
+}
+
 let nextRequestAt = 0;
 
-/**
- * Finds the Sri Lankan district for a point picked on the map (UC01 location, UC03 shelter).
- * Best effort: returns undefined when the point is outside Sri Lanka, the lookup fails or it
- * takes longer than `timeoutMs`, and the user then chooses the district manually.
- * Requests are spaced at least `minIntervalMs` apart (Nominatim allows one per second).
- */
-export async function lookupDistrict(
+async function reverseLookup(
   point: GeoPoint,
-  {
-    fetchFn = fetch,
-    headers,
-    timeoutMs = 8_000,
-    minIntervalMs = 1_000,
-  }: {
-    fetchFn?: FetchLike;
-    headers?: Record<string, string>;
-    timeoutMs?: number;
-    minIntervalMs?: number;
-  } = {},
-): Promise<District | undefined> {
+  url: string,
+  { fetchFn = fetch, headers, timeoutMs = 8_000, minIntervalMs = 1_000 }: LookupOptions = {},
+): Promise<unknown | undefined> {
   if (!isWithinSriLanka(point)) return undefined;
 
   const now = Date.now();
@@ -101,14 +105,35 @@ export async function lookupDistrict(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetchFn(nominatimReverseUrl(point), {
-      headers,
-      signal: controller.signal,
-    });
-    return response.ok ? districtFromNominatim(await response.json()) : undefined;
+    const response = await fetchFn(url, { headers, signal: controller.signal });
+    return response.ok ? response.json() : undefined;
   } catch {
     return undefined;
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * Finds the Sri Lankan district for a point picked on the map (UC01 location, UC03 shelter).
+ * Best effort: returns undefined when the point is outside Sri Lanka, the lookup fails or it
+ * takes longer than `timeoutMs`, and the user then chooses the district manually.
+ * Requests are spaced at least `minIntervalMs` apart (Nominatim allows one per second).
+ */
+export async function lookupDistrict(
+  point: GeoPoint,
+  options: LookupOptions = {},
+): Promise<District | undefined> {
+  const response = await reverseLookup(point, nominatimReverseUrl(point), options);
+  return districtFromNominatim(response);
+}
+
+export async function lookupLocation(
+  point: GeoPoint,
+  options: LookupOptions = {},
+): Promise<{ address: string; district: District } | undefined> {
+  const response = await reverseLookup(point, nominatimLocationUrl(point), options);
+  const address = addressFromNominatim(response);
+  const district = districtFromNominatim(response);
+  return address && district ? { address, district } : undefined;
 }

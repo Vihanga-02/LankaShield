@@ -106,6 +106,14 @@ describe('shelterInputSchema', () => {
     expect(issuePaths(result)).toEqual(['currentOccupancy']);
   });
 
+  it('rejects a shelter location outside Sri Lanka', () => {
+    const result = shelterInputSchema.safeParse({
+      ...valid,
+      location: { latitude: 37.422, longitude: -122.084 },
+    });
+    expect(issuePaths(result)).toEqual(['location']);
+  });
+
   it('accepts an empty phone and rejects an invalid one', () => {
     expect(shelterInputSchema.safeParse({ ...valid, contactPhone: '' }).success).toBe(true);
     expect(issuePaths(shelterInputSchema.safeParse({ ...valid, contactPhone: '12345' }))).toEqual([

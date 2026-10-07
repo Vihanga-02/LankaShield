@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { colors, spacing } from '@lankashield/shared';
 import { StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
@@ -7,7 +7,12 @@ export function AuthHeader({ title, subtitle }: { title: string; subtitle: strin
   return (
     <View style={styles.container}>
       <View style={styles.logo}>
-        <MaterialCommunityIcons name="shield-alert" size={36} color={colors.surface} />
+        <Image
+          source={require('../../../../assets/images/lankashield-logo.png')}
+          style={styles.logoImage}
+          contentFit="contain"
+          accessibilityLabel="LankaShield"
+        />
       </View>
       <Text variant="headlineMedium" style={styles.brand}>
         LankaShield
@@ -31,10 +36,14 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 16,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
   brand: {
     color: colors.primary,

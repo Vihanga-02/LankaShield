@@ -9,6 +9,10 @@ export const COLLECTIONS = {
   disasterEvents: 'disasterEvents',
   responseReports: 'responseReports',
   notifications: 'notifications',
+  eventAlerts: 'eventAlerts',
+  citizenReach: 'citizenReach',
+  shelterOccupancyHistory: 'shelterOccupancyHistory',
+  resourceDistributions: 'resourceDistributions',
 } as const;
 
 /** Cloud Storage paths (§8.2). */
