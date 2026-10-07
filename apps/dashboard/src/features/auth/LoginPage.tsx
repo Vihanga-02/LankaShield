@@ -27,12 +27,25 @@ const BRAND_BACKGROUND = [
   `linear-gradient(155deg, ${colors.primary} 0%, ${colors.primaryHover} 45%, #4A0F1C 100%)`,
 ].join(', ');
 
-/** The shield from the favicon, drawn in white for the brand panel. */
 function LogoMark({ size }: { size: number }) {
   return (
-    <Box component="svg" viewBox="0 0 32 32" aria-hidden sx={{ width: size, height: size }}>
-      <path fill="#fff" d="M16 2 4 6.5v8.2c0 7.3 5.1 13.6 12 15.3 6.9-1.7 12-8 12-15.3V6.5L16 2z" />
-      <path fill={colors.primary} d="M14.6 9h2.8v9h-2.8zM14.6 20.2h2.8V23h-2.8z" />
+    <Box
+      sx={{
+        width: size,
+        height: size,
+        p: 0.5,
+        boxSizing: 'border-box',
+        borderRadius: 2,
+        bgcolor: 'common.white',
+        display: 'grid',
+        placeItems: 'center',
+      }}>
+      <Box
+        component="img"
+        src="/lankashield-logo.png"
+        alt=""
+        sx={{ width: '100%', height: '100%' }}
+      />
     </Box>
   );
 }
@@ -115,7 +128,7 @@ function BrandPanel() {
       <SignalRings />
 
       <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', position: 'relative' }}>
-        <LogoMark size={40} />
+        <LogoMark size={48} />
         <Typography variant="h5" component="p" sx={{ letterSpacing: 0.3 }}>
           LankaShield
         </Typography>

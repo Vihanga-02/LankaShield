@@ -1,7 +1,5 @@
 import { colors, USER_ROLE_LABELS } from '@lankashield/shared';
 import LogoutOutlined from '@mui/icons-material/LogoutOutlined';
-import ShieldOutlined from '@mui/icons-material/ShieldOutlined';
-import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
 import List from '@mui/material/List';
@@ -35,9 +33,20 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ px: 3, pt: 3.5, pb: 3, display: 'flex', alignItems: 'center', gap: 1.25 }}>
-        <Avatar variant="rounded" sx={{ bgcolor: 'primary.main', width: 38, height: 38 }}>
-          <ShieldOutlined fontSize="small" />
-        </Avatar>
+        <Box
+          component="img"
+          src="/lankashield-logo.png"
+          alt="LankaShield"
+          sx={{
+            width: 52,
+            height: 52,
+            boxSizing: 'border-box',
+            p: 0.25,
+            borderRadius: 2,
+            bgcolor: 'common.white',
+            objectFit: 'contain',
+          }}
+        />
         <Box>
           <Typography variant="subtitle1" sx={{ color: 'text.primary', lineHeight: 1.2 }}>
             Lanka
