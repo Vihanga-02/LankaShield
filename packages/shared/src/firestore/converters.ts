@@ -17,6 +17,10 @@ import type {
   ShelterAllocation,
   VerificationDecision,
   WarningRequest,
+  EventAlert,
+  CitizenReachRecord,
+  ShelterOccupancySnapshot,
+  ResourceDistribution,
 } from '../models';
 
 /**
@@ -32,6 +36,9 @@ export const TIMESTAMP_FIELDS: ReadonlySet<string> = new Set([
   'endedAt',
   'generatedAt',
   'sharedAt',
+  'issuedAt',
+  'recordedAt',
+  'distributedAt',
 ]);
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -92,4 +99,8 @@ export const converters = {
   disasterEvents: createConverter<DisasterEvent>(),
   responseReports: createConverter<DisasterResponseReport>(),
   notifications: createConverter<NotificationRecord>(),
+  eventAlerts: createConverter<EventAlert>(),
+  citizenReach: createConverter<CitizenReachRecord>(),
+  shelterOccupancyHistory: createConverter<ShelterOccupancySnapshot>(),
+  resourceDistributions: createConverter<ResourceDistribution>(),
 };

@@ -1,4 +1,10 @@
-import { colors, type CountDatum, type OccupancyDatum } from '@lankashield/shared';
+import {
+  colors,
+  type AlertTimelineDatum,
+  type CountDatum,
+  type OccupancyDatum,
+  type OccupancyTimelineDatum,
+} from '@lankashield/shared';
 import {
   Bar,
   BarChart,
@@ -9,6 +15,8 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  Line,
+  LineChart,
 } from 'recharts';
 
 // Chart conventions: one series hue (brand primary), bars ≤ 24px with a 4px rounded data end,
@@ -148,6 +156,63 @@ export function OccupancyChart({ data }: { data: OccupancyDatum[] }) {
           radius={[0, 4, 4, 0]}
         />
       </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+export function AlertTimelineChart({ data }: { data: AlertTimelineDatum[] }) {
+  return (
+    <ResponsiveContainer width="100%" height={240}>
+      <BarChart data={data} margin={{ top: 20, right: 8, bottom: 0, left: -16 }}>
+        <CartesianGrid vertical={false} {...GRID} />
+        <XAxis dataKey="day" tickFormatter={shortDay} tick={AXIS} tickLine={false} />
+        <YAxis allowDecimals={false} tick={AXIS} axisLine={false} tickLine={false} />
+        <Tooltip {...TOOLTIP} labelFormatter={(d) => shortDay(String(d))} />
+        <Legend wrapperStyle={{ fontSize: 12 }} />
+        <Bar dataKey="high" name="High threat" stackId="alerts" fill={colors.danger} />
+        <Bar dataKey="medium" name="Medium" stackId="alerts" fill={colors.warning} />
+        <Bar
+          dataKey="advisory"
+          name="Advisory"
+          stackId="alerts"
+          fill={colors.primarySoft}
+          radius={[4, 4, 0, 0]}
+        />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+export function ShelterOccupancyTimelineChart({ data }: { data: OccupancyTimelineDatum[] }) {
+  return (
+    <ResponsiveContainer width="100%" height={240}>
+      <LineChart data={data} margin={{ top: 20, right: 20, bottom: 0, left: -8 }}>
+        <CartesianGrid vertical={false} {...GRID} />
+        <XAxis dataKey="day" tickFormatter={shortDay} tick={AXIS} tickLine={false} />
+        <YAxis allowDecimals={false} tick={AXIS} axisLine={false} tickLine={false} />
+        <Tooltip
+          {...TOOLTIP}
+          labelFormatter={(d) => shortDay(String(d))}
+          formatter={(v, name) => [v, name]}
+        />
+        <Legend wrapperStyle={{ fontSize: 12 }} />
+        <Line
+          type="monotone"
+          dataKey="occupancy"
+          name="Occupied"
+          stroke={colors.primary}
+          strokeWidth={3}
+          dot
+        />
+        <Line
+          type="monotone"
+          dataKey="capacity"
+          name="Capacity"
+          stroke={colors.textSecondary}
+          strokeDasharray="5 5"
+          dot={false}
+        />
+      </LineChart>
     </ResponsiveContainer>
   );
 }

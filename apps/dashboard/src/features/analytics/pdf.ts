@@ -6,7 +6,8 @@ import {
   type AnalyticsResult,
   type CountDatum,
   type DisasterEvent,
-  type OccupancyDatum,
+  type AlertTimelineDatum,
+  type OccupancyTimelineDatum,
   type ReportFilters,
 } from '@lankashield/shared';
 import { jsPDF } from 'jspdf';
@@ -22,7 +23,10 @@ export interface PdfContent {
   generatedBy: string;
   byHazard: CountDatum[];
   outcomes: CountDatum[];
-  occupancy: OccupancyDatum[];
+  alertTimeline: AlertTimelineDatum[];
+  reachByDivision: CountDatum[];
+  occupancyTimeline: OccupancyTimelineDatum[];
+  resourceCategories: CountDatum[];
 }
 
 const PRIMARY: [number, number, number] = [0xc9, 0x36, 0x4f];
@@ -149,9 +153,24 @@ export function buildReportPdf(c: PdfContent): jsPDF {
     c.outcomes.map((d) => [d.label, d.count]),
   );
   section(
-    'Shelter occupancy by district',
-    ['District', 'Occupied', 'Capacity', 'Rate'],
-    c.occupancy.map((d) => [d.district, d.occupancy, d.capacity, `${d.rate}%`]),
+    'Alert timeline',
+    ['Day', 'High', 'Medium', 'Advisory'],
+    c.alertTimeline.map((d) => [d.day, d.high, d.medium, d.advisory]),
+  );
+  section(
+    'Citizen reach by GS division',
+    ['GS division', 'Citizens'],
+    c.reachByDivision.map((d) => [d.label, d.count]),
+  );
+  section(
+    'Shelter occupancy over time',
+    ['Day', 'Occupied', 'Capacity', 'Rate'],
+    c.occupancyTimeline.map((d) => [d.day, d.occupancy, d.capacity, `${d.rate}%`]),
+  );
+  section(
+    `Resource Distribution – ${c.event.district}`,
+    ['Resource', 'Quantity'],
+    c.resourceCategories.map((d) => [d.label, d.count]),
   );
 
   const pages = doc.getNumberOfPages();

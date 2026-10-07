@@ -7,7 +7,6 @@ import {
   type DisasterEvent,
   type DisasterResponseReport,
   type HazardReport,
-  type NotificationRecord,
   type ReportFilters,
 } from '@lankashield/shared';
 import { converters } from '@lankashield/shared/firestore';
@@ -66,19 +65,6 @@ async function loadReports(event: DisasterEvent): Promise<HazardReport[]> {
   return [...byId.values()];
 }
 
-async function loadNotifications(reportIds: string[]): Promise<NotificationRecord[]> {
-  const notifications = collection(db, COLLECTIONS.notifications).withConverter(
-    converters.notifications,
-  );
-  // Firestore `in` queries accept at most 30 values.
-  const chunks: string[][] = [];
-  for (let i = 0; i < reportIds.length; i += 30) chunks.push(reportIds.slice(i, i + 30));
-  const snaps = await Promise.all(
-    chunks.map((ids) => getDocs(query(notifications, where('relatedEntityId', 'in', ids)))),
-  );
-  return snaps.flatMap((s) => s.docs.map((d) => d.data()));
-}
-
 const settled = <T>(result: PromiseSettledResult<T>): T | null =>
   result.status === 'fulfilled' ? result.value : null;
 
@@ -88,33 +74,51 @@ const settled = <T>(result: PromiseSettledResult<T>): T | null =>
  */
 export async function loadAnalyticsSources(
   event: DisasterEvent,
-): Promise<Pick<AnalyticsInput, 'reports' | 'shelters' | 'allocations' | 'notifications'>> {
-  const [reports, shelters, allocations] = await Promise.allSettled([
-    loadReports(event),
-    getDocs(collection(db, COLLECTIONS.shelters).withConverter(converters.shelters)).then((s) =>
-      s.docs.map((d) => d.data()),
-    ),
-    getDocs(
-      query(
-        collection(db, COLLECTIONS.shelterAllocations).withConverter(converters.shelterAllocations),
-        where('disasterEventId', '==', event.eventId),
-      ),
-    ).then((s) => s.docs.map((d) => d.data())),
-  ]);
-
-  const reportList = settled(reports);
-  const linkedIds = (reportList ?? [])
-    .filter((r) => r.disasterEventId === event.eventId)
-    .map((r) => r.reportId);
-  const notifications = reportList
-    ? settled((await Promise.allSettled([loadNotifications(linkedIds)]))[0])
-    : null;
+): Promise<
+  Pick<
+    AnalyticsInput,
+    'reports' | 'alerts' | 'citizenReach' | 'occupancySnapshots' | 'resourceDistributions'
+  >
+> {
+  const [reports, alerts, citizenReach, occupancySnapshots, resourceDistributions] =
+    await Promise.allSettled([
+      loadReports(event),
+      getDocs(
+        query(
+          collection(db, COLLECTIONS.eventAlerts).withConverter(converters.eventAlerts),
+          where('disasterEventId', '==', event.eventId),
+        ),
+      ).then((s) => s.docs.map((d) => d.data())),
+      getDocs(
+        query(
+          collection(db, COLLECTIONS.citizenReach).withConverter(converters.citizenReach),
+          where('disasterEventId', '==', event.eventId),
+        ),
+      ).then((s) => s.docs.map((d) => d.data())),
+      getDocs(
+        query(
+          collection(db, COLLECTIONS.shelterOccupancyHistory).withConverter(
+            converters.shelterOccupancyHistory,
+          ),
+          where('disasterEventId', '==', event.eventId),
+        ),
+      ).then((s) => s.docs.map((d) => d.data())),
+      getDocs(
+        query(
+          collection(db, COLLECTIONS.resourceDistributions).withConverter(
+            converters.resourceDistributions,
+          ),
+          where('disasterEventId', '==', event.eventId),
+        ),
+      ).then((s) => s.docs.map((d) => d.data())),
+    ]);
 
   return {
-    reports: reportList,
-    shelters: settled(shelters),
-    allocations: settled(allocations),
-    notifications,
+    reports: settled(reports),
+    alerts: settled(alerts),
+    citizenReach: settled(citizenReach),
+    occupancySnapshots: settled(occupancySnapshots),
+    resourceDistributions: settled(resourceDistributions),
   };
 }
 
