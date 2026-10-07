@@ -29,6 +29,8 @@ export function FormTextField<T extends FieldValues>({
             onChangeText={field.onChange}
             onBlur={field.onBlur}
             error={!!fieldState.error}
+            // Paper's floating label is not exposed to screen readers, so name the field for them.
+            accessibilityLabel={label}
             {...inputProps}
           />
           <HelperText type="error" visible={!!fieldState.error}>

@@ -37,7 +37,7 @@ SEED_DEMO_PASSWORD=choose-a-password npm run seed           # Bash
 npm run mobile      # Expo dev server
 npm run dashboard   # Vite dev server
 npm run seed        # load demo data (see above)
-npm test            # unit tests
+npm test            # unit + component tests (shared, dashboard, mobile)
 npm run typecheck   # all workspaces + scripts
 npm run lint
 npm run format

@@ -123,18 +123,29 @@ export async function loadAnalyticsSources(
 }
 
 /** Saves the generated report's metadata to `responseReports` (§10.4). */
+/** A new `responseReports` document ID, chosen before the first save attempt. */
+export function newResponseReportId(): string {
+  return doc(responseReportsCollection()).id;
+}
+
+/**
+ * Saves the report under `responseReportId`. The caller keeps the same ID for every retry, so a
+ * save that timed out but still reaches Firestore later is overwritten, never duplicated.
+ */
 export async function saveResponseReport({
+  responseReportId,
   event,
   result,
   filters,
   analyst,
 }: {
+  responseReportId: string;
   event: DisasterEvent;
   result: AnalyticsResult;
   filters: ReportFilters;
   analyst: Pick<AppUser, 'uid'>;
 }): Promise<string> {
-  const ref = doc(responseReportsCollection());
+  const ref = doc(responseReportsCollection(), responseReportId);
   await withTimeout(
     setDoc(ref, {
       responseReportId: ref.id,
