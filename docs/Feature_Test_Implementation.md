@@ -1,4 +1,4 @@
-# LankaShield: Feature Test Guide (Phases 4–9)
+# LankaShield: Feature Test Guide (Phases 4–10)
 
 This guide is for testing every feature built so far, from the screens, the way a real user would. It covers:
 
@@ -9,7 +9,6 @@ You don't need to read any code. Each test has steps, the expected result, and a
 
 **Not covered here.** These come later, so don't log them as missing:
 
-- Notifications lists on mobile and web (Phase 10).
 - Deployment, the installable APK, and security rules (Phases 11–12).
 
 ---
@@ -26,9 +25,10 @@ You don't need to read any code. Each test has steps, the expected result, and a
 8. [Phase 7: Verify hazard reports (UC02)](#8-phase-7-verify-hazard-reports-uc02)
 9. [Phase 8: Manage shelters (UC03)](#9-phase-8-manage-shelters-uc03)
 10. [Phase 9: Disaster analytics and reports (UC04)](#10-phase-9-disaster-analytics-and-reports-uc04)
-11. [End-to-end scenario](#11-end-to-end-scenario)
-12. [Deferred until the Android development build](#12-deferred-until-the-android-development-build)
-13. [Bug report template](#13-bug-report-template)
+11. [Phase 10: Notifications](#11-phase-10-notifications)
+12. [End-to-end scenario](#12-end-to-end-scenario)
+13. [Deferred until the Android development build](#13-deferred-until-the-android-development-build)
+14. [Bug report template](#14-bug-report-template)
 
 ---
 
@@ -180,7 +180,7 @@ Status rules:
 | --- | --- | --- | --- |
 | L1 | **A map shows "The map could not be loaded…" or "Map tiles could not be loaded…"** | Maps use the free OpenStreetMap servers and need internet. They may be slow or busy at times. | Expected when offline. The coordinates are still shown, and on the web there is an "open in OpenStreetMap" link. Report it if it happens while online. |
 | L2 | **The district is sometimes not filled in from the map**, with "The district could not be detected…" | The free OpenStreetMap address lookup is best effort. Points at sea, outside Sri Lanka or exactly on a border may have no district. | Expected. Choose the district from the list. Report it if it **never** works while online. |
-| L3 | The mobile **Notifications** tab says "No notifications". The web **Notifications** page is a placeholder. On mobile Home, "Active warnings" always says "No active warnings". | Built in Phase 10 | Not tested now |
+| L3 | **Some notifications on the Duty Officer's Notifications page don't show on the phone.** | Only **delivered** (Sent) notifications reach the app. Pending and failed ones appear once the Duty Officer clicks **Retry delivery**. | Expected (see P10-W05). |
 | L4 | **Share with donor** doesn't contact a real organisation, and the organisation names end in "(mock)". | Donor delivery is simulated for the prototype | Expected |
 | L5 | In Expo Go, turning on airplane mode may show "Disconnected from Metro" or a similar message. | Expo Go loses contact with the laptop | Ignore it. **Don't reload the app while offline**, because Expo Go needs the laptop to load it. |
 | L6 | Everything suddenly fails with **"You do not have permission to do this. Sign in again."** | The Firebase project's temporary test-mode rules have expired | Stop testing and tell the project owner. This is not an app bug. |
@@ -197,12 +197,13 @@ Status rules:
 3. **Phase 9, part A (baseline)**: read-only checks against fresh data. Do this before Phases 7 and 8 change the numbers.
 4. **Phases 5 → 6 → 7 → 8**, in order.
 5. **Phase 9, parts B–D**: filters, save/export/share, and cross-checks that your Phase 7 and 8 actions show up in analytics.
-6. The **end-to-end scenario** in [section 11](#11-end-to-end-scenario).
+6. **Phase 10**: notifications on both apps.
+7. The **end-to-end scenario** in [section 12](#12-end-to-end-scenario).
 
 ### Recording
 
-- Fill in the **Result** column with **Pass**, **Fail**, **Blocked** (couldn't run it) or **Deferred** (the items in section 12).
-- For every Fail, write a bug report using the [template](#13-bug-report-template) and put its number in the Result column, for example `Fail – BUG-03`.
+- Fill in the **Result** column with **Pass**, **Fail**, **Blocked** (couldn't run it) or **Deferred** (the items in section 13).
+- For every Fail, write a bug report using the [template](#14-bug-report-template) and put its number in the Result column, for example `Fail – BUG-03`.
 - Text in "quotes" is the exact message the app should show. A different message is worth noting, even if the behaviour is right.
 - "Live" means the screen should update **by itself** within a few seconds, without a page refresh.
 
@@ -223,7 +224,7 @@ Status rules:
 | P4-M07 | Empty sign-in and password visibility | Tap "Sign in" with empty fields. Then type a password and tap the eye icon. | Messages: "Enter your email address." and "Enter your password." The eye icon shows and hides the password. | |
 | P4-M08 | Officer blocked from mobile | Sign in as `duty.officer.demo@example.com`. Repeat with the District Officer and DMC Analyst accounts. | You stay on Sign in, with a banner such as "Duty Officer accounts use the LankaShield officer web dashboard." | |
 | P4-M09 | Session restore | While signed in, close Expo Go completely (swipe it away), then open the project again from Expo Go. | You go straight to Home, still signed in, with no login screen. | |
-| P4-M10 | Tabs | Tap each bottom tab. | **Home**, **Report Hazard**, **My Reports**, **Notifications** and **Profile** all open. Notifications shows "No notifications" (L3). | |
+| P4-M10 | Tabs | Tap each bottom tab. | **Home**, **Report Hazard**, **My Reports**, **Notifications** and **Profile** all open. Notifications lists your notifications (Phase 10). | |
 | P4-M11 | Profile | Open Profile as the demo citizen. | Shows initials "NP", "Nimal Perera", "Citizen", the email, phone 0771234567 and district Ratnapura. | |
 | P4-M12 | Sign out | On Profile, tap "Sign out". Then close and reopen the app. | You return to Sign in and stay signed out after reopening. | |
 
@@ -421,7 +422,41 @@ The metric tiles are:
 
 ---
 
-## 11. End-to-end scenario
+## 11. Phase 10: Notifications
+
+Sign in on the phone as `citizen.demo@example.com`, and on the web as the **Duty Officer**. Retrying deliveries (P10-W05) changes the demo data; a data reset puts the pending and failed examples back.
+
+### 11.1 Mobile (Expo Go)
+
+| ID | Test | Steps | Expected result | Result |
+| --- | --- | --- | --- | --- |
+| P10-M01 | Unread badge | Sign in and look at the bottom tab bar. | The **Notifications** tab shows a red badge with the number of unread notifications. The number matches the "Unread (n)" chip on the Notifications screen. | |
+| P10-M02 | Notifications list | Open **Notifications**. | The header shows "*n* unread" (or "All caught up"). Cards are newest first, each with an icon, title, text, type ("Warning" or "Verification result") and time ("2 days ago"). Unread cards are highlighted with a dot and bold title. | |
+| P10-M03 | Filters | Tap **All**, **Unread**, **Warnings** and **Report results**. | Each chip shows its count and lists only matching cards. An empty filter shows a message such as "No unread notifications". | |
+| P10-M04 | Open a result | Tap an unread **verification result**. Then go back. | The report's **Report details** screen opens. Back on the list, that card is no longer highlighted and the badge went down by 1. | |
+| P10-M05 | Open a warning | Tap an unread **warning**. | It is marked read (no longer highlighted) and stays in the list. Warnings have no separate screen. | |
+| P10-M06 | Mark all as read | With unread notifications, tap **Mark all as read**. | The header says "All caught up", the tab badge disappears and **Unread** shows "No unread notifications". | |
+| P10-M07 | Active warnings on Home | Make sure at least one warning is unread (a data reset makes the October 2026 flood warning unread), then open **Home**. | "Active warnings" lists the unread warnings with "All notifications". Tapping one opens Notifications and the warning leaves Home. With no unread warnings: "No active warnings". | |
+| P10-M08 | New result while the app is open | Keep the phone on **Home**. On the web, the Duty Officer verifies one of this citizen's pending reports (or one you submitted in Phase 5). | Within a few seconds a banner appears above the tab bar with the result title and **View**, and the badge goes up by 1. **View** opens the report showing its new status. | |
+| P10-M09 | Reading via My Reports | Get a new unread result (as in P10-M08), then open that report from **My Reports** instead of Notifications. | The badge goes down: opening the report marks its result notification read. | |
+| P10-M10 | Undelivered items are hidden | Before P10-W05, look for the result for **LS-SEED-008** in the citizen's list. | It is **not** there (its delivery failed). It appears after the Duty Officer retries it (P10-W05). | |
+| P10-M11 | Each user sees their own | Sign out and sign in as `volunteer.demo@example.com`. | Only the volunteer's notifications and badge are shown; none of the citizen's. | |
+
+### 11.2 Web dashboard (Duty Officer)
+
+| ID | Test | Steps | Expected result | Result |
+| --- | --- | --- | --- | --- |
+| P10-W01 | Page and counts | Open **Notifications** in the sidebar (Duty Officer only). | Title "Notifications" with **Pending**, **Sent** and **Failed** chips and their counts. | |
+| P10-W02 | Pending and failed list | Look at the default list ("Pending and failed"). | With fresh data: the **pending** result for **LS-SEED-011** (to Kumari Silva, Community Volunteer) and the **failed** result for **LS-SEED-008** (to Nimal Perera, Citizen), each with **Retry delivery**. | |
+| P10-W03 | Filters and search | Set Delivery to **Sent**, then **All deliveries**; set Type to **Warning**; search `Nimal`, then `LS-SEED-011`. | Each filter narrows the list correctly; sent rows show "Delivered" instead of a button. No match shows "No notifications match these filters". | |
+| P10-W04 | Report link | Click the tracking ID under a verification result. | The report's review page opens. | |
+| P10-W05 | Retry delivery | Keep the citizen's phone open. Click **Retry delivery** on the failed **LS-SEED-008** row. | Toast: "Delivered to Nimal Perera. It now appears in their app." The row leaves the list without a refresh; Sent goes up by 1 and Failed down by 1. On the phone, the banner appears and the result is now in the list. | |
+| P10-W06 | Nothing left to deliver | Retry the remaining pending row too. | "No pending or failed deliveries" and "Every notification has reached its recipient." | |
+| P10-W07 | New decisions are delivered at once | Record a decision in the Verification Queue, then set Delivery to **Sent**. | The new result notification is listed as **Sent** straight away; it never appears as pending. | |
+
+---
+
+## 12. End-to-end scenario
 
 Run this once at the end with two people, or one person using the phone and the laptop. It walks through one disaster from the first report to the donor report.
 
@@ -430,14 +465,14 @@ Run this once at the end with two people, or one person using the phone and the 
 | 1 | Citizen (phone) | Go **offline** and report a **Flood**, severity High, with 1 photo. Choose district **Ratnapura**. | "Saved on this device" and Pending Sync | |
 | 2 | Citizen (phone) | Go **online**. | Syncs automatically and shows Pending Verification | |
 | 3 | Duty Officer (web) | Find the report in the queue (live), open it, and check the photo and "(sent from the offline queue)". Choose **Verify and escalate**, link **Ratnapura Floods — October 2026**, and add a remark. | Recorded and status Escalated | |
-| 4 | Citizen (phone) | Open My Reports. | Escalated, with the officer's remark shown | |
+| 4 | Citizen (phone) | Keep the app open on Home during step 3, then open My Reports. | A banner "Your hazard report was verified and escalated" appears with **View**, and the Notifications tab gets a badge. The report shows Escalated with the officer's remark. | |
 | 5 | District Officer (web) | Allocate `30` evacuees to a Ratnapura shelter, linked to the October 2026 event. If it doesn't fit, use an alternative. | Allocation confirmed and the table updated | |
 | 6 | DMC Analyst (web) | Open the October 2026 event. | Reports received and Verified each went up by 1; Evacuees allocated went up by 30; still Provisional | |
 | 7 | DMC Analyst (web) | Export the PDF. | The PDF shows the new numbers and PROVISIONAL REPORT | |
 
 ---
 
-## 12. Deferred until the Android development build
+## 13. Deferred until the Android development build
 
 These can't be tested in Expo Go. They will be tested once the installable development build is ready.
 
@@ -448,7 +483,7 @@ These can't be tested in Expo Go. They will be tested once the installable devel
 
 ---
 
-## 13. Bug report template
+## 14. Bug report template
 
 Copy this for each problem you find:
 
@@ -480,4 +515,5 @@ Copy this for each problem you find:
 | 7 — Verification (UC02) | 20 | | | | | | |
 | 8 — Shelters (UC03) | 27 | | | | | | |
 | 9 — Analytics (UC04) | 20 | | | | | | |
+| 10 — Notifications | 18 | | | | | | |
 | End-to-end | 7 steps | | | | | | |

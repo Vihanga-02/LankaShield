@@ -25,8 +25,9 @@
 | Phase 8 — UC03 shelter management | ✅ Done — list, map, register/edit, transactional allocation with alternatives; concurrent over-allocation refused (checked against Firebase) |
 | Phase 9 — UC04 analytics and reporting | ✅ Done — event selection, filters, metrics, 4 charts, provisional/final, save, PDF export, mocked donor share; 81 unit tests pass |
 | OpenStreetMap maps (D42) | ✅ Done — Google Maps replaced on web (Leaflet) and mobile (Leaflet in a WebView, works in Expo Go); district filled in from a map point; 88 unit tests pass |
-| Development build (D18) | ⏳ Next — EAS Android development build and APK (no Maps key needed any more) |
-| Phases 10–12 | Not started |
+| Development build (D18) | ⏭ Moved to Phase 12 — EAS project created (D15); build the APK there. Not needed for Phase 10: everything runs in Expo Go |
+| Phase 10 — Maps and notifications | ✅ Done — maps (D42); mobile notification list, unread badge, active warnings, in-app banner; dashboard delivery page with retry (D43, D44); retry checked against Firebase; 99 unit tests pass |
+| Phases 11–12 | Not started |
 
 ### 0.2 Decisions made during implementation
 
@@ -48,7 +49,7 @@ These decisions override anything later in this document that disagrees with the
 | D12 | **Shared enums are `as const` arrays with derived union types**, not TypeScript `enum`. | Usable in dropdowns and `z.enum()`, and compatible with the dashboard's `erasableSyntaxOnly` setting. |
 | D13 | **Pure business rules live in `packages/shared/src/rules/`** (capacity, shelter status, verification transitions, provisional/final decision, metric completeness). | Written and unit-tested once, used by both apps. |
 | D14 | **Android package ID is `lk.lankashield.mobile`** (fixed; do not change after the first build). | The Google Maps Android key restriction and EAS credentials depend on it. |
-| D15 | **The EAS project lives in the group's Expo organisation.** When the development build is made (after Phase 9, D18), set `owner: '<organisation-slug>'` in `app.config.ts`, then run `npx eas-cli@latest init` from `apps/mobile`. It cannot edit `app.config.ts` itself, so copy the `projectId` it prints into `extra.eas.projectId`. | Every group member can build under the shared organisation. |
+| D15 | **The EAS project lives in the group's Expo organisation.** Created on 7 Oct 2026 with `npx eas-cli@latest init`: owner `lankashield-team`, project [`@lankashield-team/lankashield`](https://expo.dev/accounts/lankashield-team/projects/lankashield), project ID `6fe32d5b-4ac7-45f7-b34a-7fd0abdf18ed`. `eas init` cannot edit `app.config.ts`, so both values are added by hand in Phase 12. | Every group member can build under the shared organisation. |
 | D16 | **Firestore converters live in `@lankashield/shared/firestore`**, not in each app. `converters.<collection>` turns ISO strings in timestamp fields into `Timestamp` on write, drops `undefined` fields, and turns every `Timestamp` back into an ISO string on read. The main `@lankashield/shared` entry stays free of Firebase. | One mapping used by mobile, the dashboard and the seed script. |
 | D17 | **Seed shelter occupancy comes from the active event's confirmed allocations.** Allocations for completed events are historical records. | Shelter numbers in the seed always match the allocation records. |
 | D18 | **Mobile development happens in Expo Go until Phase 9; the EAS development build is made after Phase 9.** Every mobile package used so far is in Expo Go: AsyncStorage, vector icons, and (since D42) `react-native-webview` for the maps. | A development build takes time and isn't needed to build the features. |
@@ -76,6 +77,8 @@ These decisions override anything later in this document that disagrees with the
 | D40 | **Superseded by D42.** ~~Web maps use `@vis.gl/react-google-maps`~~ with Google's `DEMO_MAP_ID` for Advanced Markers. When the Maps JavaScript API cannot load (no key, auth failure), every map shows a fallback with the coordinates and a Google Maps link. Shelter markers use status colours, the info window and table name the status in text, and the map fits its bounds to the visible shelters. | Phase 10 map requirements met early; the web key must allow the Maps JavaScript API for `localhost` and the Vercel domain. |
 | D41 | **Charts follow one convention:** a single series hue (brand primary) with categories named on the axis, bars ≤ 24 px with 4 px rounded ends, a solid hairline grid, values at the bar tip, tooltips, and a Chart/Table toggle on every chart. The status colours failed a colour-blind separation check as a category palette, so they are not used to tell chart categories apart. | Readable for colour-blind users and in print; every value is also available as a table. |
 | D42 | **Maps use OpenStreetMap instead of Google Maps.** Web: `leaflet` + `react-leaflet` with the standard OSM tiles; shelter pins are coloured by status with a popup (name, occupancy, Allocate) and fit to the visible shelters; the shelter form pin can be clicked or dragged. Mobile: a Leaflet page in `react-native-webview` (`OsmMap`), which works in Expo Go; taps and pin drags come back as messages, and "My location" re-centres with GPS. **District auto-fill:** a point chosen on the map (or typed coordinates on the web) is reverse-geocoded with OSM Nominatim (`lookupDistrict` in `packages/shared`, district name then ISO code LK-xx, one request per second). On mobile the phone's geocoder runs first and Nominatim fills in a missing district. When no district is found the user is asked to choose it. No API key, Google Cloud project or billing is needed; the "© OpenStreetMap contributors" credit is always shown. | Removes the Expo Go black-map limitation (D33) and the Maps keys; OSM tile and Nominatim usage policies allow light use such as a campus prototype. For heavy production traffic, switch the tile URL to a hosted provider. |
+| D43 | **Mobile notifications come from one live listener** (`startNotificationsListener`, started in the tabs layout for the signed-in user; `where('recipientId', '==', uid)`, sorted on the device, so no composite index). It feeds the Notifications tab (filters All / Unread / Warnings / Report results, "Mark all as read"), the unread badge on the tab, and Home's **Active warnings** (unread `WARNING` notifications). Only **delivered** (`SENT`) notifications are shown; PENDING and FAILED ones appear after the Duty Officer retries them (D44). Opening a verification result, or its report, marks it read. A notification that arrives while the app is open shows an in-app banner with **View**, instead of an Expo local notification: no new native module, and it behaves the same in Expo Go and the APK. Remote push stays out of scope. | §10.5 and the Phase 10 exit condition: verification results reach the mobile list live, without Cloud Functions. |
+| D44 | **The Duty Officer's Notifications page lists deliveries** (live, newest first) with Sent / Pending / Failed counts, filters (Pending and failed by default, each status, all; type; search) and the recipient's name and role. **Retry delivery** marks a PENDING or FAILED notification SENT in a transaction and, for a verification result, sets the decision's `notificationStatus` to SENT; the notification then appears in the recipient's app. | The in-app record is the delivery channel, so a retry is a real state change the recipient can see, and "Citizens reached" (§14, SENT only) stays consistent. |
 
 ### 0.3 Installed versions
 
@@ -1138,11 +1141,12 @@ Done early with OpenStreetMap (D42):
 
 **Notifications**
 
-- Create Firestore in-app notification records.
-- Show unread notification count in the mobile application.
-- Notify the reporter after verification through the in-app list.
-- Use Expo local notifications while the application is running if useful.
-- Leave real remote push notifications as an optional later improvement.
+- ✅ Create Firestore in-app notification records (verification transaction, D34).
+- ✅ Show unread notification count in the mobile application (tab badge, D43).
+- ✅ Notify the reporter after verification through the in-app list (live, D43).
+- ✅ While the application is running, an in-app banner is used instead of Expo local notifications (D43).
+- ✅ Duty Officer delivery page with retry for pending and failed notifications (D44).
+- Real remote push notifications remain an optional later improvement.
 
 **Exit condition:** Verification results appear in the mobile notification list without requiring Cloud Functions.
 
@@ -1200,8 +1204,15 @@ Aim for meaningful coverage of core business logic rather than artificially test
 
 **Mobile**
 
-- Create the Android development build after Phase 9 (D18, D15): set `owner` and `extra.eas.projectId`, then run `npx eas-cli@latest build --profile development --platform android`. Rebuild it whenever a native package is added. No Maps key is needed (D42).
-- Produce the final Android APK using EAS Build (a `preview` profile with `"buildType": "apk"`).
+- Link the app to the EAS project (D15). In `apps/mobile/app.config.ts` add:
+
+  ```ts
+  owner: 'lankashield-team',
+  extra: { eas: { projectId: '6fe32d5b-4ac7-45f7-b34a-7fd0abdf18ed' } },
+  ```
+
+- Produce the final Android APK using EAS Build: add an `eas.json` with a `preview` profile (`"distribution": "internal"`, `"android": { "buildType": "apk" }`), then run `npx eas-cli@latest build --profile preview --platform android` from `apps/mobile`. EAS reads only `EXPO_PUBLIC_*` values it can see, so add the Firebase values as EAS environment variables (or an `env` block in the profile) before building. No Maps key is needed (D42).
+- A separate development build (`--profile development`) is optional: every package works in Expo Go (D18, D42).
 - Test on at least one physical Android device.
 
 **Web**
