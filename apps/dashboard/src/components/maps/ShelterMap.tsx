@@ -36,12 +36,14 @@ function FitBounds({ shelters }: { shelters: EmergencyShelter[] }) {
 export function ShelterMap({
   shelters,
   onAllocate,
+  height = 520,
 }: {
   shelters: EmergencyShelter[];
   onAllocate?: (shelter: EmergencyShelter) => void;
+  height?: number;
 }) {
   return (
-    <MapFrame height={360} center={SRI_LANKA_CENTER} zoom={SRI_LANKA_ZOOM}>
+    <MapFrame height={height} center={SRI_LANKA_CENTER} zoom={SRI_LANKA_ZOOM}>
       <FitBounds shelters={shelters} />
       {shelters.map((s) => {
         const presentation = SHELTER_STATUS_PRESENTATION[s.status];
