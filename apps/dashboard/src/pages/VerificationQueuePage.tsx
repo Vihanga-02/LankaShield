@@ -9,6 +9,7 @@ import {
   type HazardReport,
   type HazardType,
   type Severity,
+  type VerificationQueueStatusFilter,
 } from '@lankashield/shared';
 import FiberManualRecord from '@mui/icons-material/FiberManualRecord';
 import InboxOutlined from '@mui/icons-material/InboxOutlined';
@@ -37,11 +38,7 @@ import { ErrorState } from '../components/feedback/ErrorState';
 import { LoadingState } from '../components/feedback/LoadingState';
 import { StatusChip } from '../components/feedback/StatusChip';
 import { PageHeader } from '../components/layout/PageHeader';
-import { useVerificationQueue } from '@lankashield/shared/verification-react';
-import {
-  subscribeToReportsByStatus,
-  type VerificationQueueStatusFilter,
-} from '../services/verification';
+import { useVerificationQueue } from '../features/verification/useVerificationQueue';
 import { formatDateTime, formatRelative } from '../utils/format';
 
 const SEVERITY_COLOR = {
@@ -51,12 +48,16 @@ const SEVERITY_COLOR = {
   EXTREME: 'error',
 } as const;
 
-const STATUS_FILTER_OPTIONS: { value: VerificationQueueStatusFilter; label: string }[] = [
-  { value: 'PENDING_VERIFICATION', label: 'Pending Verification' },
-  { value: 'VERIFIED', label: 'Verified' },
-  { value: 'REJECTED', label: 'Rejected' },
-  { value: 'ALL', label: 'All' },
+const STATUS_FILTER_OPTIONS: VerificationQueueStatusFilter[] = [
+  'PENDING_VERIFICATION',
+  'VERIFIED',
+  'ESCALATED',
+  'REJECTED',
+  'ALL',
 ];
+
+const filterLabel = (status: VerificationQueueStatusFilter) =>
+  status === 'ALL' ? 'All statuses' : HAZARD_REPORT_STATUS_PRESENTATION[status].label;
 
 interface Filters {
   search: string;
@@ -158,7 +159,7 @@ function QueueTable({ reports }: { reports: HazardReport[] }) {
 /** UC02 verification queue: live list with search, filters and pagination. */
 export default function VerificationQueuePage() {
   const [status, setStatus] = useState<VerificationQueueStatusFilter>('PENDING_VERIFICATION');
-  const { state, retry } = useVerificationQueue(subscribeToReportsByStatus, status);
+  const { state, retry } = useVerificationQueue(status);
   const [filters, setFilters] = useState<Filters>({
     search: '',
     hazardType: '',
@@ -178,19 +179,6 @@ export default function VerificationQueuePage() {
     setPage(0);
   };
 
-  const getStatusLabel = () => {
-    switch (status) {
-      case 'ALL':
-        return 'total reports';
-      case 'PENDING_VERIFICATION':
-        return 'pending verification';
-      case 'VERIFIED':
-        return 'verified';
-      case 'REJECTED':
-        return 'rejected';
-    }
-  };
-
   return (
     <>
       <PageHeader
@@ -200,7 +188,7 @@ export default function VerificationQueuePage() {
           state.status === 'success' ? (
             <Chip
               icon={<FiberManualRecord sx={{ fontSize: 12 }} />}
-              label={`Live · ${all.length} ${getStatusLabel()}`}
+              label={`Live · ${all.length} ${status === 'ALL' ? 'reports' : filterLabel(status).toLowerCase()}`}
               color="success"
               variant="outlined"
             />
@@ -237,9 +225,9 @@ export default function VerificationQueuePage() {
               setPage(0);
             }}
             sx={{ minWidth: 200 }}>
-            {STATUS_FILTER_OPTIONS.map((opt) => (
-              <MenuItem key={opt.value} value={opt.value}>
-                {opt.label}
+            {STATUS_FILTER_OPTIONS.map((s) => (
+              <MenuItem key={s} value={s}>
+                {filterLabel(s)}
               </MenuItem>
             ))}
           </TextField>
@@ -299,11 +287,9 @@ export default function VerificationQueuePage() {
             title={
               status === 'PENDING_VERIFICATION'
                 ? 'No reports waiting for verification'
-                : status === 'VERIFIED'
-                  ? 'No verified reports'
-                  : status === 'REJECTED'
-                    ? 'No rejected reports'
-                    : 'No reports found'
+                : status === 'ALL'
+                  ? 'No hazard reports yet'
+                  : `No ${filterLabel(status).toLowerCase()} reports`
             }
             message={
               status === 'PENDING_VERIFICATION'

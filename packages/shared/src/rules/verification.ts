@@ -5,7 +5,7 @@ import type { HazardReportStatus, VerificationOutcome } from '../enums';
 export const OUTCOME_TO_REPORT_STATUS: Record<VerificationOutcome, HazardReportStatus> = {
   VERIFIED_INFO: 'VERIFIED',
   REJECTED: 'REJECTED',
-  VERIFIED_ESCALATED: 'VERIFIED',
+  VERIFIED_ESCALATED: 'ESCALATED',
 };
 
 /** Only reports waiting for review can receive a decision; this blocks a second decision. */

@@ -30,6 +30,5 @@ export interface WarningRequest {
   severity: Severity;
   affectedDistrict: District;
   status: WarningRequestStatus;
-  deliveryStatus?: 'PENDING' | 'SENT' | 'FAILED';
   createdAt: IsoDateString;
 }

@@ -31,7 +31,7 @@ import {
   loadReviewContext,
   subscribeToReport,
   type ReviewContext,
-} from '../services/verification';
+} from '../features/verification/verification.service';
 import { useAsync } from '../hooks/useAsync';
 import { useLive, type Subscribe } from '../hooks/useLive';
 import { formatDateTime } from '../utils/format';

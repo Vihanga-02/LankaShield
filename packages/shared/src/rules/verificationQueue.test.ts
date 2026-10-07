@@ -3,21 +3,19 @@ import { describe, expect, it } from 'vitest';
 import { sortReportsNewestFirst, verificationQueueStatuses } from './verificationQueue';
 
 describe('verification queue rules', () => {
-  it('includes legacy escalated reports in the verified queue', () => {
-    expect(verificationQueueStatuses('VERIFIED')).toEqual(['VERIFIED', 'ESCALATED']);
-  });
-
-  it('includes submitted reports in the all queue, excluding drafts and pending sync', () => {
+  it('includes every submitted report in the all queue, excluding drafts and pending sync', () => {
     expect(verificationQueueStatuses('ALL')).toEqual([
       'PENDING_VERIFICATION',
       'VERIFIED',
-      'REJECTED',
       'ESCALATED',
+      'REJECTED',
     ]);
   });
 
-  it('keeps pending and rejected queues separate', () => {
+  it('keeps each reviewed status as its own queue', () => {
     expect(verificationQueueStatuses('PENDING_VERIFICATION')).toEqual(['PENDING_VERIFICATION']);
+    expect(verificationQueueStatuses('VERIFIED')).toEqual(['VERIFIED']);
+    expect(verificationQueueStatuses('ESCALATED')).toEqual(['ESCALATED']);
     expect(verificationQueueStatuses('REJECTED')).toEqual(['REJECTED']);
   });
 
