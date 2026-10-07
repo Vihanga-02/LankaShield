@@ -6,17 +6,19 @@ import {
   type OccupancyTimelineDatum,
 } from '@lankashield/shared';
 import {
+  Area,
   Bar,
   BarChart,
   CartesianGrid,
+  ComposedChart,
   LabelList,
   Legend,
+  ReferenceDot,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
   Line,
-  LineChart,
 } from 'recharts';
 
 // Chart conventions: one series hue (brand primary), bars ≤ 24px with a 4px rounded data end,
@@ -184,9 +186,20 @@ export function AlertTimelineChart({ data }: { data: AlertTimelineDatum[] }) {
 }
 
 export function ShelterOccupancyTimelineChart({ data }: { data: OccupancyTimelineDatum[] }) {
+  const peak = data.reduce<OccupancyTimelineDatum | null>(
+    (highest, row) => (!highest || row.occupancy > highest.occupancy ? row : highest),
+    null,
+  );
+
   return (
-    <ResponsiveContainer width="100%" height={240}>
-      <LineChart data={data} margin={{ top: 20, right: 20, bottom: 0, left: -8 }}>
+    <ResponsiveContainer width="100%" height={300}>
+      <ComposedChart data={data} margin={{ top: 76, right: 20, bottom: 0, left: -8 }}>
+        <defs>
+          <linearGradient id="occupancyShade" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={colors.primary} stopOpacity={0.28} />
+            <stop offset="100%" stopColor={colors.primary} stopOpacity={0.05} />
+          </linearGradient>
+        </defs>
         <CartesianGrid vertical={false} {...GRID} />
         <XAxis dataKey="day" tickFormatter={shortDay} tick={AXIS} tickLine={false} />
         <YAxis allowDecimals={false} tick={AXIS} axisLine={false} tickLine={false} />
@@ -196,13 +209,15 @@ export function ShelterOccupancyTimelineChart({ data }: { data: OccupancyTimelin
           formatter={(v, name) => [v, name]}
         />
         <Legend wrapperStyle={{ fontSize: 12 }} />
-        <Line
+        <Area
           type="monotone"
           dataKey="occupancy"
           name="Occupied"
           stroke={colors.primary}
           strokeWidth={3}
-          dot
+          fill="url(#occupancyShade)"
+          dot={{ r: 4, fill: colors.primary, stroke: '#fff', strokeWidth: 2 }}
+          activeDot={{ r: 6 }}
         />
         <Line
           type="monotone"
@@ -212,7 +227,49 @@ export function ShelterOccupancyTimelineChart({ data }: { data: OccupancyTimelin
           strokeDasharray="5 5"
           dot={false}
         />
-      </LineChart>
+        {peak ? (
+          <ReferenceDot
+            x={peak.day}
+            y={peak.occupancy}
+            r={6}
+            fill={colors.primary}
+            stroke="#fff"
+            strokeWidth={3}
+            label={({ viewBox }) => {
+              const box = viewBox as { cx?: number; cy?: number };
+              const x = (box.cx ?? 0) - 58;
+              const y = (box.cy ?? 0) - 68;
+              return (
+                <g>
+                  <rect
+                    x={x}
+                    y={y}
+                    width={116}
+                    height={55}
+                    rx={7}
+                    fill="#fff"
+                    stroke={colors.border}
+                  />
+                  <text x={x + 10} y={y + 16} fontSize={11} fill={colors.textSecondary}>
+                    Peak occupancy
+                  </text>
+                  <text
+                    x={x + 10}
+                    y={y + 33}
+                    fontSize={13}
+                    fontWeight={700}
+                    fill={colors.textPrimary}>
+                    {peak.occupancy.toLocaleString('en-LK')} people
+                  </text>
+                  <text x={x + 10} y={y + 48} fontSize={10} fill={colors.textSecondary}>
+                    {shortDay(peak.day)}
+                  </text>
+                </g>
+              );
+            }}
+          />
+        ) : null}
+      </ComposedChart>
     </ResponsiveContainer>
   );
 }
