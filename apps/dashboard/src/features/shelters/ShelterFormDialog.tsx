@@ -115,11 +115,11 @@ export function ShelterFormDialog({
 
   return (
     <Dialog open onClose={busy ? undefined : onClose} maxWidth="md" fullWidth>
-      <DialogTitle sx={{ py: 1, color: 'primary.main' }}>
+      <DialogTitle sx={{ color: 'primary.main' }}>
         {editing ? `Edit ${shelter.name}` : 'Register shelter'}
       </DialogTitle>
-      <DialogContent dividers sx={{ py: 1 }}>
-        <Stack component="form" id="shelter-form" spacing={2} noValidate onSubmit={onSubmit}>
+      <DialogContent dividers sx={{ py: 3 }}>
+        <Stack component="form" id="shelter-form" spacing={2.5} noValidate onSubmit={onSubmit}>
           {error ? <Alert severity="error">{error}</Alert> : null}
           {duplicate ? (
             <Alert severity="warning">
@@ -135,7 +135,7 @@ export function ShelterFormDialog({
               gap: 3,
               alignItems: 'start',
             }}>
-            <Stack spacing={1}>
+            <Stack spacing={2}>
               <Controller
                 control={control}
                 name="name"
@@ -293,7 +293,7 @@ export function ShelterFormDialog({
                     <PointMap
                       point={field.value}
                       onPick={busy ? undefined : syncLocationDetails}
-                      height={330}
+                      height={420}
                       zoom={13}
                     />
                     <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1.5 }}>
