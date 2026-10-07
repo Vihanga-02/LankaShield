@@ -18,6 +18,8 @@ export interface GeoLocation extends GeoPoint {
 /** Copy of the latest verification decision, written in the same batch so mobile can show it. */
 export interface LatestDecisionSummary {
   decisionId: string;
+  officerId?: string;
+  officerName?: string;
   outcome: VerificationOutcome;
   remarks: string;
   decidedAt: IsoDateString;

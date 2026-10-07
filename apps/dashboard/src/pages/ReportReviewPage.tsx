@@ -4,22 +4,19 @@ import {
   SEVERITY_LABELS,
   toErrorMessage,
   USER_ROLE_LABELS,
-  VERIFICATION_OUTCOME_LABELS,
   type HazardReport,
 } from '@lankashield/shared';
 import ArrowBackOutlined from '@mui/icons-material/ArrowBackOutlined';
 import ContentCopyOutlined from '@mui/icons-material/ContentCopyOutlined';
 import SearchOffOutlined from '@mui/icons-material/SearchOffOutlined';
-import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
 import Divider from '@mui/material/Divider';
 import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { useCallback, type ReactNode } from 'react';
+import { useCallback } from 'react';
 import { Link as RouterLink, useParams } from 'react-router';
 
 import { EmptyState } from '../components/feedback/EmptyState';
@@ -28,6 +25,8 @@ import { LoadingState } from '../components/feedback/LoadingState';
 import { StatusChip } from '../components/feedback/StatusChip';
 import { PointMap } from '../components/maps/PointMap';
 import { DecisionForm } from '../features/verification/DecisionForm';
+import { RecordedDecision } from '../features/verification/RecordedDecision';
+import { Row, Section } from '../features/verification/ReviewLayout';
 import {
   loadReviewContext,
   subscribeToReport,
@@ -36,30 +35,6 @@ import {
 import { useAsync } from '../hooks/useAsync';
 import { useLive, type Subscribe } from '../hooks/useLive';
 import { formatDateTime } from '../utils/format';
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          {title}
-        </Typography>
-        {children}
-      </CardContent>
-    </Card>
-  );
-}
-
-function Row({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <Stack direction="row" spacing={2} sx={{ py: 0.75 }}>
-      <Typography color="textSecondary" sx={{ width: 140, flexShrink: 0 }}>
-        {label}
-      </Typography>
-      <Box sx={{ minWidth: 0 }}>{value}</Box>
-    </Stack>
-  );
-}
 
 function ContextPanels({ report }: { report: HazardReport }) {
   const load = useCallback(() => loadReviewContext(report), [report]);
@@ -74,25 +49,13 @@ function ContextPanels({ report }: { report: HazardReport }) {
 
   return (
     <Stack spacing={3}>
-      <Section title={pending ? 'Decision' : 'Recorded decision'}>
-        {pending ? (
+      {pending ? (
+        <Section title="Decision">
           <DecisionForm reportId={report.reportId} events={events} />
-        ) : report.latestDecision ? (
-          <>
-            <Alert severity="success" sx={{ mb: 2 }}>
-              {VERIFICATION_OUTCOME_LABELS[report.latestDecision.outcome]} — recorded{' '}
-              {formatDateTime(report.latestDecision.decidedAt)}. The reporter has been notified.
-            </Alert>
-            <Row label="Remarks" value={report.latestDecision.remarks || '—'} />
-            <Row
-              label="Disaster event"
-              value={events.find((e) => e.eventId === report.disasterEventId)?.name ?? 'Not linked'}
-            />
-          </>
-        ) : (
-          <Typography color="textSecondary">This report has already been reviewed.</Typography>
-        )}
-      </Section>
+        </Section>
+      ) : (
+        <RecordedDecision report={report} events={events} />
+      )}
 
       <Section title="Reporter">
         {reporter ? (

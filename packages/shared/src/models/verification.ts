@@ -13,6 +13,7 @@ export interface VerificationDecision {
   decisionId: string;
   reportId: string;
   officerId: string;
+  officerName?: string;
   outcome: VerificationOutcome;
   remarks: string;
   disasterEventId?: string;

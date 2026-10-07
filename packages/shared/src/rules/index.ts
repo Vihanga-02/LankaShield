@@ -1,5 +1,6 @@
 export * from './shelter';
 export * from './verification';
+export * from './verificationQueue';
 export * from './analytics';
 export * from './roles';
 export * from './reportId';

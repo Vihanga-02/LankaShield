@@ -7,9 +7,9 @@ import {
   toErrorMessage,
   USER_ROLE_LABELS,
   type HazardReport,
-  type HazardReportStatus,
   type HazardType,
   type Severity,
+  type VerificationQueueStatusFilter,
 } from '@lankashield/shared';
 import FiberManualRecord from '@mui/icons-material/FiberManualRecord';
 import InboxOutlined from '@mui/icons-material/InboxOutlined';
@@ -48,12 +48,16 @@ const SEVERITY_COLOR = {
   EXTREME: 'error',
 } as const;
 
-const STATUS_OPTIONS: HazardReportStatus[] = [
+const STATUS_FILTER_OPTIONS: VerificationQueueStatusFilter[] = [
   'PENDING_VERIFICATION',
   'VERIFIED',
   'ESCALATED',
   'REJECTED',
+  'ALL',
 ];
+
+const filterLabel = (status: VerificationQueueStatusFilter) =>
+  status === 'ALL' ? 'All statuses' : HAZARD_REPORT_STATUS_PRESENTATION[status].label;
 
 interface Filters {
   search: string;
@@ -154,7 +158,7 @@ function QueueTable({ reports }: { reports: HazardReport[] }) {
 
 /** UC02 verification queue: live list with search, filters and pagination. */
 export default function VerificationQueuePage() {
-  const [status, setStatus] = useState<HazardReportStatus>('PENDING_VERIFICATION');
+  const [status, setStatus] = useState<VerificationQueueStatusFilter>('PENDING_VERIFICATION');
   const { state, retry } = useVerificationQueue(status);
   const [filters, setFilters] = useState<Filters>({
     search: '',
@@ -184,7 +188,7 @@ export default function VerificationQueuePage() {
           state.status === 'success' ? (
             <Chip
               icon={<FiberManualRecord sx={{ fontSize: 12 }} />}
-              label={`Live · ${all.length} ${HAZARD_REPORT_STATUS_PRESENTATION[status].label.toLowerCase()}`}
+              label={`Live · ${all.length} ${status === 'ALL' ? 'reports' : filterLabel(status).toLowerCase()}`}
               color="success"
               variant="outlined"
             />
@@ -217,13 +221,13 @@ export default function VerificationQueuePage() {
             label="Status"
             value={status}
             onChange={(e) => {
-              setStatus(e.target.value as HazardReportStatus);
+              setStatus(e.target.value as VerificationQueueStatusFilter);
               setPage(0);
             }}
             sx={{ minWidth: 200 }}>
-            {STATUS_OPTIONS.map((s) => (
+            {STATUS_FILTER_OPTIONS.map((s) => (
               <MenuItem key={s} value={s}>
-                {HAZARD_REPORT_STATUS_PRESENTATION[s].label}
+                {filterLabel(s)}
               </MenuItem>
             ))}
           </TextField>
@@ -283,7 +287,9 @@ export default function VerificationQueuePage() {
             title={
               status === 'PENDING_VERIFICATION'
                 ? 'No reports waiting for verification'
-                : `No ${HAZARD_REPORT_STATUS_PRESENTATION[status].label.toLowerCase()} reports`
+                : status === 'ALL'
+                  ? 'No hazard reports yet'
+                  : `No ${filterLabel(status).toLowerCase()} reports`
             }
             message={
               status === 'PENDING_VERIFICATION'

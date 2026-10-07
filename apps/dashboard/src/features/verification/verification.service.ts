@@ -5,13 +5,16 @@ import {
   createsWarningRequest,
   findPossibleDuplicates,
   OUTCOME_TO_REPORT_STATUS,
+  sortReportsNewestFirst,
   verificationNotificationText,
+  verificationQueueStatuses,
   type AppUser,
   type DisasterEvent,
   type DuplicateCandidate,
   type HazardReport,
-  type HazardReportStatus,
+  type VerificationDecision,
   type VerificationDecisionInput,
+  type VerificationQueueStatusFilter,
 } from '@lankashield/shared';
 import { converters } from '@lankashield/shared/firestore';
 import {
@@ -34,17 +37,19 @@ const reports = () =>
 const reportRef = (id: string) =>
   doc(db, COLLECTIONS.hazardReports, id).withConverter(converters.hazardReports);
 
-const newestFirst = (a: HazardReport, b: HazardReport) => b.createdAt.localeCompare(a.createdAt);
-
-/** Live list of reports with one status (default: waiting for a decision), newest first. */
+/** Live list of reports for a queue filter (one status, or all submitted reports), newest first. */
 export function subscribeToReportsByStatus(
-  status: HazardReportStatus,
+  status: VerificationQueueStatusFilter,
   onData: (reports: HazardReport[]) => void,
   onError: (error: unknown) => void,
 ): Unsubscribe {
   // Sorted in the browser so the query needs no composite index.
-  const q = query(reports(), where('status', '==', status));
-  return onSnapshot(q, (snap) => onData(snap.docs.map((d) => d.data()).sort(newestFirst)), onError);
+  const q = query(reports(), where('status', 'in', verificationQueueStatuses(status)));
+  return onSnapshot(
+    q,
+    (snap) => onData(sortReportsNewestFirst(snap.docs.map((d) => d.data()))),
+    onError,
+  );
 }
 
 export function subscribeToReport(
@@ -102,7 +107,7 @@ export async function submitVerificationDecision({
   input,
 }: {
   reportId: string;
-  officer: Pick<AppUser, 'uid'>;
+  officer: Pick<AppUser, 'uid' | 'fullName'>;
   input: VerificationDecisionInput;
 }): Promise<{ decisionId: string }> {
   return runTransaction(db, async (tx) => {
@@ -120,6 +125,7 @@ export async function submitVerificationDecision({
       decisionId,
       reportId,
       officerId: officer.uid,
+      officerName: officer.fullName,
       outcome: input.outcome,
       remarks,
       disasterEventId,
@@ -131,7 +137,14 @@ export async function submitVerificationDecision({
     tx.update(reportRef(reportId), {
       status: OUTCOME_TO_REPORT_STATUS[input.outcome],
       ...(disasterEventId ? { disasterEventId } : {}),
-      latestDecision: { decisionId, outcome: input.outcome, remarks, decidedAt: serverTimestamp() },
+      latestDecision: {
+        decisionId,
+        officerId: officer.uid,
+        officerName: officer.fullName,
+        outcome: input.outcome,
+        remarks,
+        decidedAt: serverTimestamp(),
+      },
       updatedAt: serverTimestamp(),
     });
 
@@ -164,4 +177,25 @@ export async function submitVerificationDecision({
 
     return { decisionId };
   });
+}
+
+/** Live decision record, shown on the review page once a report has been reviewed. */
+export function subscribeToDecision(
+  decisionId: string,
+  onData: (decision: VerificationDecision | null) => void,
+  onError: (error: unknown) => void,
+): Unsubscribe {
+  return onSnapshot(
+    doc(db, COLLECTIONS.verificationDecisions, decisionId).withConverter(
+      converters.verificationDecisions,
+    ),
+    (snap) => onData(snap.exists() ? snap.data() : null),
+    onError,
+  );
+}
+
+/** Officer name for decisions recorded before the name was stored with the decision. */
+export async function loadOfficerName(officerId: string): Promise<string> {
+  const snap = await getDoc(doc(db, COLLECTIONS.users, officerId).withConverter(converters.users));
+  return snap.exists() ? snap.data().fullName : officerId;
 }
