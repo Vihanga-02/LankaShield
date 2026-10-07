@@ -23,6 +23,9 @@ const ICONS: Record<string, ReactElement> = {
   Closed: <DoNotDisturbOnOutlined />,
   'Provisional Report': <HourglassEmptyOutlined />,
   'Final Report': <CheckCircleOutline />,
+  Sent: <CheckCircleOutline />,
+  Pending: <HourglassEmptyOutlined />,
+  Failed: <ErrorOutline />,
 };
 
 export function StatusChip({ presentation }: { presentation: StatusPresentation }) {
