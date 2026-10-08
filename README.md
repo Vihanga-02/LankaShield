@@ -45,3 +45,13 @@ npm run build
 ```
 
 Install mobile native packages with `npx expo install <pkg>` inside `apps/mobile`.
+
+## Continuous integration and deployment
+
+| Workflow | When | What it does |
+| --- | --- | --- |
+| `.github/workflows/ci.yml` | Every pull request and merge to `main` | Format check, typecheck, lint, all tests, dashboard build |
+| `.github/workflows/mobile-preview.yml` | Merges to `main` that touch `apps/mobile`, `packages/shared` or dependencies | Only JavaScript changed → OTA update to the `preview` channel. Native code changed → new preview APK build on EAS |
+| Vercel (dashboard) | Every merge to `main` / pull request | Production / preview deployment of `apps/dashboard` |
+
+The mobile workflow needs the `EXPO_TOKEN` repository secret, the Firebase values in the EAS `preview` environment, and Android credentials set up once with `npx eas-cli@latest credentials -p android` (from `apps/mobile`).

@@ -329,7 +329,8 @@ const REPORTS: ReportSpec[] = [
     hazardType: 'LANDSLIDE',
     severity: 'MODERATE',
     title: 'Unstable slope near Horana estate road',
-    description: 'Loose soil and small rocks are falling onto the estate road after continuous rain.',
+    description:
+      'Loose soil and small rocks are falling onto the estate road after continuous rain.',
     district: 'Kalutara',
     latitude: 6.7159,
     longitude: 80.0626,

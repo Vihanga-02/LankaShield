@@ -1,0 +1,96 @@
+name: Mobile preview (OTA update or APK build)
+
+# On every merge to main that can change the mobile app (D47):
+#   - only JavaScript changed  -> publish an OTA update to the "preview" channel
+#   - native code/config changed -> start a new preview APK build on EAS
+# The decision uses the expo-updates fingerprint: a preview build with the same fingerprint can
+# run the new JavaScript; a different fingerprint needs a new build.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/shared/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/mobile-preview.yml'
+  workflow_dispatch:
+
+# One deploy at a time; a newer merge waits so two runs never start builds for the same fingerprint.
+concurrency:
+  group: mobile-preview
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Publish update or build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Never ship JavaScript that fails its checks.
+      - name: Typecheck and test (shared, mobile)
+        run: |
+          npm run typecheck --workspace packages/shared --workspace apps/mobile
+          npm test --workspace packages/shared --workspace apps/mobile
+
+      - name: Set up EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Compute the Android fingerprint
+        id: fingerprint
+        working-directory: apps/mobile
+        run: |
+          hash=$(eas fingerprint:generate --platform android --environment preview --json --non-interactive | jq -r '.hash')
+          if [ -z "$hash" ] || [ "$hash" = "null" ]; then
+            echo "::error::Could not compute the project fingerprint."
+            exit 1
+          fi
+          echo "hash=$hash" >> "$GITHUB_OUTPUT"
+          echo "Android fingerprint: $hash"
+
+      - name: Look for a preview build with this fingerprint
+        id: build
+        working-directory: apps/mobile
+        env:
+          FINGERPRINT: ${{ steps.fingerprint.outputs.hash }}
+        run: |
+          builds=$(eas build:list --platform android --build-profile preview \
+            --fingerprint-hash "$FINGERPRINT" --limit 20 --json --non-interactive)
+          # Finished, queued or running builds can take the update; errored or cancelled ones cannot.
+          count=$(echo "$builds" | jq '[.[] | select(.status | ascii_upcase | IN("FINISHED", "IN_PROGRESS", "IN_QUEUE", "NEW"))] | length')
+          if [ "$count" -gt 0 ]; then echo "exists=true" >> "$GITHUB_OUTPUT"; else echo "exists=false" >> "$GITHUB_OUTPUT"; fi
+          echo "Matching preview builds: $count"
+
+      - name: Publish an OTA update to the preview channel (JavaScript-only change)
+        if: steps.build.outputs.exists == 'true'
+        working-directory: apps/mobile
+        run: |
+          message="$(git log -1 --pretty=%s)"
+          eas update --channel preview --environment preview --platform android \
+            --message "$message" --non-interactive
+          echo "### Published an OTA update to **preview**" >> "$GITHUB_STEP_SUMMARY"
+          echo "Installed preview APKs download it and apply it on the next launch." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Start a new preview APK build (native change)
+        if: steps.build.outputs.exists != 'true'
+        working-directory: apps/mobile
+        run: |
+          eas build --platform android --profile preview --non-interactive --no-wait
+          echo "### Started a new preview APK build" >> "$GITHUB_STEP_SUMMARY"
+          echo "No preview build matches fingerprint \`${{ steps.fingerprint.outputs.hash }}\`. Install the new APK from expo.dev when it finishes." >> "$GITHUB_STEP_SUMMARY"
