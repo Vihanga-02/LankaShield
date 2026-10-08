@@ -1224,7 +1224,7 @@ Aim for meaningful coverage of core business logic rather than artificially test
 - Configure build command `npm run build` and output directory `dist`.
 - Add the Firebase environment variables in Vercel (no Maps key is needed, D42). Vercel installs from the root `package-lock.json`, so the shared workspace package resolves.
 - Add the Vercel domain to Firebase Authentication authorised domains.
-- In `apps/dashboard/index.html`, change `og:image` and `twitter:image` from `/og-image.png` to the full deployed URL (`https://<vercel-domain>/og-image.png`); link previews need an absolute address.
+- ✅ Deployed on Vercel at <https://lanka-shield.vercel.app>; `og:image`, `twitter:image` and `og:url` use the full deployed URL.
 - Add a rewrite to `index.html` and verify direct React Router route refreshes.
 
 Use this `apps/dashboard/vercel.json` for the Vite single-page application:

@@ -52,11 +52,14 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
+      # eas-cli can print notices (e.g. "Environment variables … loaded") to stdout before the JSON,
+      # even with --json, so keep only the output from the first line that starts the JSON.
       - name: Compute the Android fingerprint
         id: fingerprint
         working-directory: apps/mobile
         run: |
-          hash=$(eas fingerprint:generate --platform android --environment preview --json --non-interactive | jq -r '.hash')
+          hash=$(eas fingerprint:generate --platform android --environment preview --json --non-interactive \
+            | sed -n '/^[{[]/,$p' | jq -r '.hash')
           if [ -z "$hash" ] || [ "$hash" = "null" ]; then
             echo "::error::Could not compute the project fingerprint."
             exit 1
@@ -71,7 +74,7 @@ jobs:
           FINGERPRINT: ${{ steps.fingerprint.outputs.hash }}
         run: |
           builds=$(eas build:list --platform android --build-profile preview \
-            --fingerprint-hash "$FINGERPRINT" --limit 20 --json --non-interactive)
+            --fingerprint-hash "$FINGERPRINT" --limit 20 --json --non-interactive | sed -n '/^[{[]/,$p')
           # Finished, queued or running builds can take the update; errored or cancelled ones cannot.
           count=$(echo "$builds" | jq '[.[] | select(.status | ascii_upcase | IN("FINISHED", "IN_PROGRESS", "IN_QUEUE", "NEW"))] | length')
           if [ "$count" -gt 0 ]; then echo "exists=true" >> "$GITHUB_OUTPUT"; else echo "exists=false" >> "$GITHUB_OUTPUT"; fi
