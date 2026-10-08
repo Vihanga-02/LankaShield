@@ -10,7 +10,7 @@ import {
 } from '@lankashield/shared';
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { Button, Text } from 'react-native-paper';
+import { Banner, Button, Text } from 'react-native-paper';
 
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorState } from '@/components/feedback/ErrorState';
@@ -43,6 +43,13 @@ export default function HomeScreen() {
       </View>
 
       <SyncBanner />
+
+      <Banner
+        visible={!!user && !user.district}
+        icon="map-marker-alert-outline"
+        actions={[{ label: 'Set district', onPress: () => router.push('/set-district') }]}>
+        Set your home district to receive warnings for your area.
+      </Banner>
 
       <View style={styles.reportCard}>
         <MaterialCommunityIcons

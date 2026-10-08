@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { MOBILE_ROLES } from '../enums';
-import { optionalPhoneSchema } from './common';
+import { districtSchema, optionalPhoneSchema } from './common';
 
 /** Firebase Auth minimum password length. */
 export const MIN_PASSWORD_LENGTH = 6;
@@ -33,6 +33,8 @@ export const registerInputSchema = z
     }),
     confirmPassword: z.string(),
     role: z.enum(MOBILE_ROLES, { error: 'Choose Citizen or Community Volunteer.' }),
+    /** Home district: warnings for this district are sent to the user (D48). */
+    district: districtSchema,
   })
   .refine((v) => v.password === v.confirmPassword, {
     error: 'Passwords do not match.',

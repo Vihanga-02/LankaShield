@@ -1,4 +1,4 @@
-import type { DeliveryStatus, NotificationType } from '../enums';
+import type { DeliveryStatus, NotificationType, Severity } from '../enums';
 import type { IsoDateString } from './common';
 
 /** `notifications/{notificationId}` — in-app notification for one recipient. */
@@ -12,4 +12,7 @@ export interface NotificationRecord {
   read: boolean;
   deliveryStatus: DeliveryStatus;
   createdAt: IsoDateString;
+  /** Warnings only (D49): copied from the warning so the app can show them without another read. */
+  severity?: Severity;
+  expiresAt?: IsoDateString;
 }

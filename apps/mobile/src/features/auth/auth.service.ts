@@ -4,6 +4,7 @@ import {
   isMobileRole,
   USER_ROLE_LABELS,
   type AppUser,
+  type District,
   type LoginInput,
   type RegisterInput,
 } from '@lankashield/shared';
@@ -15,9 +16,10 @@ import {
   signOut,
   type User,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
 import { auth, db } from '@/services/firebase';
+import { withTimeout } from '@/utils/withTimeout';
 import { useAuthStore } from '@/store/authStore';
 import { useNotificationsStore } from '@/store/notificationsStore';
 import { useOfflineQueueStore } from '@/store/offlineQueueStore';
@@ -43,6 +45,7 @@ export async function registerUser(input: RegisterInput): Promise<void> {
       email: input.email,
       phone: input.phone || undefined,
       role: input.role,
+      district: input.district,
       active: true,
       createdAt: new Date().toISOString(),
     };
@@ -57,6 +60,16 @@ export async function registerUser(input: RegisterInput): Promise<void> {
   } finally {
     store.setRegistering(false);
   }
+}
+
+/** Saves the signed-in user's home district; warnings for that district are then sent to them (D48). */
+export async function updateHomeDistrict(district: District): Promise<void> {
+  const user = useAuthStore.getState().user;
+  if (!user) throw new AppError('UNAUTHENTICATED');
+  await withTimeout(updateDoc(doc(db, COLLECTIONS.users, user.uid), { district }), 15_000);
+  const updated: AppUser = { ...user, district };
+  await writeCachedProfile(updated);
+  useAuthStore.getState().setSignedIn(updated);
 }
 
 export async function signOutUser(notice?: string): Promise<void> {

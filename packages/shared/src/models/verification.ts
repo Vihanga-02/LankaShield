@@ -31,4 +31,9 @@ export interface WarningRequest {
   affectedDistrict: District;
   status: WarningRequestStatus;
   createdAt: IsoDateString;
+  /** Set when a District Officer sends the warning (APPROVED) or declines the request. */
+  warningId?: string;
+  reviewedBy?: string;
+  reviewedAt?: IsoDateString;
+  declineReason?: string;
 }

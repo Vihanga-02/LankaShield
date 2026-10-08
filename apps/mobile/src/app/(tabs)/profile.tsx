@@ -1,4 +1,5 @@
 import { toErrorMessage, colors, radius, spacing, USER_ROLE_LABELS } from '@lankashield/shared';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import { Avatar, Button, Divider, HelperText, List, Text } from 'react-native-paper';
@@ -68,16 +69,17 @@ export default function ProfileScreen() {
           description={user.phone ?? 'Not provided'}
           left={(p) => <List.Icon {...p} icon="phone-outline" />}
         />
-        {user.district ? (
-          <>
-            <Divider />
-            <List.Item
-              title="District"
-              description={user.district}
-              left={(p) => <List.Icon {...p} icon="map-marker-outline" />}
-            />
-          </>
-        ) : null}
+        <Divider />
+        <List.Item
+          title="Home district"
+          description={user.district ?? 'Not set — you will not receive district warnings'}
+          left={(p) => <List.Icon {...p} icon="map-marker-outline" />}
+          right={() => (
+            <Button compact onPress={() => router.push('/set-district')}>
+              {user.district ? 'Change' : 'Set'}
+            </Button>
+          )}
+        />
       </View>
 
       <Button

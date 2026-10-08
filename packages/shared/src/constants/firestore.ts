@@ -9,6 +9,7 @@ export const COLLECTIONS = {
   disasterEvents: 'disasterEvents',
   responseReports: 'responseReports',
   notifications: 'notifications',
+  warnings: 'warnings',
   eventAlerts: 'eventAlerts',
   citizenReach: 'citizenReach',
   shelterOccupancyHistory: 'shelterOccupancyHistory',

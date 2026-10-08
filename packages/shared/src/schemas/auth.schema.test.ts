@@ -30,6 +30,7 @@ describe('registerInputSchema', () => {
     password: 'secret1',
     confirmPassword: 'secret1',
     role: 'CITIZEN',
+    district: 'Ratnapura',
   };
 
   it('accepts a citizen or volunteer registration', () => {
@@ -37,6 +38,15 @@ describe('registerInputSchema', () => {
     expect(registerInputSchema.safeParse({ ...valid, role: 'VOLUNTEER', phone: '' }).success).toBe(
       true,
     );
+  });
+
+  it('requires a home district', () => {
+    expect(paths(registerInputSchema.safeParse({ ...valid, district: undefined }))).toEqual([
+      'district',
+    ]);
+    expect(paths(registerInputSchema.safeParse({ ...valid, district: 'Atlantis' }))).toEqual([
+      'district',
+    ]);
   });
 
   it('does not allow self-registration as an officer', () => {

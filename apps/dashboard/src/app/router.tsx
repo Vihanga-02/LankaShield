@@ -27,6 +27,7 @@ export const router = createBrowserRouter([
           guarded('/verification', () => import('../pages/VerificationQueuePage')),
           guarded('/verification/:reportId', () => import('../pages/ReportReviewPage')),
           guarded('/shelters', () => import('../pages/SheltersPage')),
+          guarded('/warnings', () => import('../pages/WarningsPage')),
           guarded('/analytics', () => import('../pages/AnalyticsPage')),
           guarded('/analytics/:eventId', () => import('../pages/AnalyticsReportPage')),
           guarded('/notifications', () => import('../pages/NotificationsPage')),
