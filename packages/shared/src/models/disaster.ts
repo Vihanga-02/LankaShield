@@ -92,12 +92,7 @@ export interface ShelterOccupancySnapshot {
 }
 
 export type ReliefResourceCategory =
-  | 'FOOD_PACK'
-  | 'WATER_KIT'
-  | 'MEDICAL_KIT'
-  | 'HYGIENE_KIT'
-  | 'BLANKET'
-  | 'OTHER';
+  'FOOD_PACK' | 'WATER_KIT' | 'MEDICAL_KIT' | 'HYGIENE_KIT' | 'BLANKET' | 'OTHER';
 
 /** `resourceDistributions/{distributionId}` — relief issued for an event destination district. */
 export interface ResourceDistribution {

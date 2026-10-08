@@ -1,8 +1,12 @@
 import type { ExpoConfig } from 'expo/config';
 
+/** EAS project in the group's Expo organisation (D15). */
+const EAS_PROJECT_ID = '6fe32d5b-4ac7-45f7-b34a-7fd0abdf18ed';
+
 const config: ExpoConfig = {
   name: 'LankaShield',
   slug: 'lankashield',
+  owner: 'lankashield-team',
   version: '1.0.0',
   orientation: 'portrait',
   // Generated from assets/images/lankashield-logo.png (the master logo).
@@ -48,6 +52,15 @@ const config: ExpoConfig = {
       },
     ],
   ],
+  // OTA updates (EAS Update). The fingerprint changes only when native code or native config
+  // changes, so CI publishes JS-only changes as updates and builds a new APK otherwise (D47).
+  runtimeVersion: { policy: 'fingerprint' },
+  updates: {
+    url: `https://u.expo.dev/${EAS_PROJECT_ID}`,
+  },
+  extra: {
+    eas: { projectId: EAS_PROJECT_ID },
+  },
   experiments: {
     typedRoutes: true,
     reactCompiler: true,
