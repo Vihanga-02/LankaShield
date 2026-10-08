@@ -82,6 +82,7 @@ These decisions override anything later in this document that disagrees with the
 | D44 | **The Duty Officer's Notifications page lists deliveries** (live, newest first) with Sent / Pending / Failed counts, filters (Pending and failed by default, each status, all; type; search) and the recipient's name and role. **Retry delivery** marks a PENDING or FAILED notification SENT in a transaction and, for a verification result, sets the decision's `notificationStatus` to SENT; the notification then appears in the recipient's app. | The in-app record is the delivery channel, so a retry is a real state change the recipient can see, and "Citizens reached" (§14, SENT only) stays consistent. |
 | D45 | **Test setup.** Dashboard: Vitest + React Testing Library on jsdom (`vitest.config.ts`, `src/test/setup.ts`), tests next to components. Mobile: Jest with `jest-expo` + React Native Testing Library 14 (async `render`/`fireEvent`), tests in `src/__tests__/` because Expo Router treats files under `src/app/` as routes. Every Firebase service module is mocked (D5). The root `package.json` overrides `test-renderer` to `~1.2.0`, whose `react-reconciler` accepts React 19.2; newer versions require React 19.3 and would install a second React. | Phase 11 component tests without touching the real project, while keeping a single React 19.2.3 in every workspace. |
 | D46 | **Saving a response report is idempotent.** The analytics page picks one `responseReports` ID per analysis run (`newResponseReportId`) and reuses it for every save and export retry. | A save that times out is still queued by Firestore and lands later; a retry with a new ID would have created a duplicate saved report (found during failure test F7). |
+| D47 | **Mobile continuous deployment.** `expo-updates` with `runtimeVersion: { policy: 'fingerprint' }`, `updates.url` for the EAS project, and `apps/mobile/eas.json` with a `preview` profile (internal APK, channel `preview`, EAS environment `preview`, remote version codes with auto-increment). `.github/workflows/mobile-preview.yml` runs on merges to `main` that touch the mobile app, shared code or dependencies: it type-checks and tests, computes the Android fingerprint (`eas fingerprint:generate`), and if a preview build with that fingerprint exists (`eas build:list --fingerprint-hash`) publishes an OTA update to `preview`; otherwise it starts a new preview APK build. `.github/workflows/ci.yml` runs format check, typecheck, lint, tests and the dashboard build on every pull request and merge. | The decision logic uses stable `eas-cli` commands because Expo's `continuous-deploy-fingerprint` action is marked "not yet ready for use". JS-only merges cost no build. |
 
 ### 0.3 Installed versions
 
@@ -1207,14 +1208,12 @@ Aim for meaningful coverage of core business logic rather than artificially test
 
 **Mobile**
 
-- Link the app to the EAS project (D15). In `apps/mobile/app.config.ts` add:
-
-  ```ts
-  owner: 'lankashield-team',
-  extra: { eas: { projectId: '6fe32d5b-4ac7-45f7-b34a-7fd0abdf18ed' } },
-  ```
-
-- Produce the final Android APK using EAS Build: add an `eas.json` with a `preview` profile (`"distribution": "internal"`, `"android": { "buildType": "apk" }`), then run `npx eas-cli@latest build --profile preview --platform android` from `apps/mobile`. EAS reads only `EXPO_PUBLIC_*` values it can see, so add the Firebase values as EAS environment variables (or an `env` block in the profile) before building. No Maps key is needed (D42).
+- ✅ Link the app to the EAS project (D15): `owner` and `extra.eas.projectId` in `app.config.ts`.
+- ✅ EAS Update and the `preview` build profile, plus the CI workflows (D47).
+- Add the six `EXPO_PUBLIC_FIREBASE_*` values to the EAS **preview** environment (expo.dev → project → Environment variables, or `eas env:create --environment preview`). Builds and OTA updates cannot see the git-ignored `.env`. No Maps key is needed (D42).
+- Set up the Android keystore once, interactively: `npx eas-cli@latest credentials -p android` (choose the `preview` profile and let EAS generate a keystore), or run the first build by hand with `npx eas-cli@latest build -p android --profile preview`. CI cannot create credentials non-interactively.
+- Add an Expo access token as the GitHub secret `EXPO_TOKEN` (repo → Settings → Secrets and variables → Actions).
+- Start the first preview APK: merge to `main`, or run **Mobile preview** manually (Actions → Run workflow). Later merges publish OTA updates when only JavaScript changed.
 - A separate development build (`--profile development`) is optional: every package works in Expo Go (D18, D42).
 - Test on at least one physical Android device.
 
