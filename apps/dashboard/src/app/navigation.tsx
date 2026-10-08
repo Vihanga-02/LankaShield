@@ -1,5 +1,6 @@
 import type { DashboardRole } from '@lankashield/shared';
 import AccountCircleOutlined from '@mui/icons-material/AccountCircleOutlined';
+import CampaignOutlined from '@mui/icons-material/CampaignOutlined';
 import DashboardOutlined from '@mui/icons-material/DashboardOutlined';
 import FactCheckOutlined from '@mui/icons-material/FactCheckOutlined';
 import HolidayVillageOutlined from '@mui/icons-material/HolidayVillageOutlined';
@@ -30,6 +31,12 @@ export const NAV_ITEMS: readonly NavItem[] = [
     path: '/shelters',
     label: 'Shelters',
     icon: <HolidayVillageOutlined />,
+    roles: ['DISTRICT_OFFICER'],
+  },
+  {
+    path: '/warnings',
+    label: 'Warnings',
+    icon: <CampaignOutlined />,
     roles: ['DISTRICT_OFFICER'],
   },
   {

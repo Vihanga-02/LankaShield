@@ -21,6 +21,7 @@ import type {
   CitizenReachRecord,
   ShelterOccupancySnapshot,
   ResourceDistribution,
+  Warning,
 } from '../models';
 
 /**
@@ -39,6 +40,8 @@ export const TIMESTAMP_FIELDS: ReadonlySet<string> = new Set([
   'issuedAt',
   'recordedAt',
   'distributedAt',
+  'expiresAt',
+  'reviewedAt',
 ]);
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -103,4 +106,5 @@ export const converters = {
   citizenReach: createConverter<CitizenReachRecord>(),
   shelterOccupancyHistory: createConverter<ShelterOccupancySnapshot>(),
   resourceDistributions: createConverter<ResourceDistribution>(),
+  warnings: createConverter<Warning>(),
 };

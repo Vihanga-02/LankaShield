@@ -7,6 +7,7 @@ export * from './reportId';
 export * from './location';
 export * from './geocoding';
 export * from './notifications';
+export * from './warnings';
 export * from './offlineSync';
 export * from './duplicates';
 export * from './analyticsCharts';

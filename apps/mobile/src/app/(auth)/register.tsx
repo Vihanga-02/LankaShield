@@ -17,6 +17,7 @@ import { FormTextField } from '@/components/FormTextField';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { registerUser } from '@/features/auth/auth.service';
 import { AuthHeader } from '@/features/auth/components/AuthHeader';
+import { HomeDistrictField } from '@/features/auth/components/HomeDistrictField';
 
 export default function RegisterScreen() {
   const [error, setError] = useState<string | null>(null);
@@ -99,6 +100,18 @@ export default function RegisterScreen() {
           label="Phone (optional)"
           keyboardType="phone-pad"
           autoComplete="tel"
+        />
+        <Controller
+          control={control}
+          name="district"
+          render={({ field, fieldState }) => (
+            <HomeDistrictField
+              value={field.value}
+              onChange={field.onChange}
+              error={fieldState.error?.message}
+              disabled={formState.isSubmitting}
+            />
+          )}
         />
         <FormTextField
           control={control}

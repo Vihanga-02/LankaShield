@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   colors,
   NOTIFICATION_TYPE_LABELS,
+  SEVERITY_LABELS,
   radius,
   spacing,
   type ColorToken,
@@ -13,7 +14,7 @@ import { StyleSheet, View } from 'react-native';
 import { Text, TouchableRipple } from 'react-native-paper';
 
 import { INTER_FONTS } from '@/theme/paperTheme';
-import { timeAgo } from '@/utils/time';
+import { formatDateTime, timeAgo } from '@/utils/time';
 
 const TYPE_STYLE: Record<
   NotificationType,
@@ -42,6 +43,7 @@ export function NotificationCard({
 }) {
   const style = TYPE_STYLE[notification.type];
   const unread = !notification.read;
+  const expired = !!notification.expiresAt && notification.expiresAt <= new Date().toISOString();
 
   return (
     <TouchableRipple
@@ -69,7 +71,13 @@ export function NotificationCard({
           </Text>
           <Text variant="labelSmall" style={styles.muted}>
             {NOTIFICATION_TYPE_LABELS[notification.type]} · {timeAgo(notification.createdAt)}
+            {notification.severity ? ` · ${SEVERITY_LABELS[notification.severity]} severity` : ''}
           </Text>
+          {notification.expiresAt ? (
+            <Text variant="labelSmall" style={expired ? styles.muted : styles.active}>
+              {expired ? 'Expired' : `Active until ${formatDateTime(notification.expiresAt)}`}
+            </Text>
+          ) : null}
         </View>
       </View>
     </TouchableRipple>
@@ -106,4 +114,5 @@ const styles = StyleSheet.create({
   },
   body: { color: colors.textPrimary, marginTop: 2 },
   muted: { color: colors.textSecondary, marginTop: spacing.xs },
+  active: { color: colors.warning, marginTop: 2 },
 });

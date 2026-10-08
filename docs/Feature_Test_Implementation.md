@@ -26,9 +26,10 @@ You don't need to read any code. Each test has steps, the expected result, and a
 9. [Phase 8: Manage shelters (UC03)](#9-phase-8-manage-shelters-uc03)
 10. [Phase 9: Disaster analytics and reports (UC04)](#10-phase-9-disaster-analytics-and-reports-uc04)
 11. [Phase 10: Notifications](#11-phase-10-notifications)
-12. [End-to-end scenario](#12-end-to-end-scenario)
-13. [Deferred until the Android development build](#13-deferred-until-the-android-development-build)
-14. [Bug report template](#14-bug-report-template)
+12. [District warnings](#12-district-warnings)
+13. [End-to-end scenario](#13-end-to-end-scenario)
+14. [Deferred until the Android development build](#14-deferred-until-the-android-development-build)
+15. [Bug report template](#15-bug-report-template)
 
 ---
 
@@ -198,12 +199,12 @@ Status rules:
 4. **Phases 5 → 6 → 7 → 8**, in order.
 5. **Phase 9, parts B–D**: filters, save/export/share, and cross-checks that your Phase 7 and 8 actions show up in analytics.
 6. **Phase 10**: notifications on both apps.
-7. The **end-to-end scenario** in [section 12](#12-end-to-end-scenario).
+7. The **end-to-end scenario** in [section 13](#13-end-to-end-scenario).
 
 ### Recording
 
-- Fill in the **Result** column with **Pass**, **Fail**, **Blocked** (couldn't run it) or **Deferred** (the items in section 13).
-- For every Fail, write a bug report using the [template](#14-bug-report-template) and put its number in the Result column, for example `Fail – BUG-03`.
+- Fill in the **Result** column with **Pass**, **Fail**, **Blocked** (couldn't run it) or **Deferred** (the items in section 14).
+- For every Fail, write a bug report using the [template](#15-bug-report-template) and put its number in the Result column, for example `Fail – BUG-03`.
 - Text in "quotes" is the exact message the app should show. A different message is worth noting, even if the behaviour is right.
 - "Live" means the screen should update **by itself** within a few seconds, without a page refresh.
 
@@ -456,7 +457,26 @@ Sign in on the phone as `citizen.demo@example.com`, and on the web as the **Duty
 
 ---
 
-## 12. End-to-end scenario
+## 12. District warnings
+
+Phone: sign in as `citizen.demo@example.com` (home district Ratnapura). Web: sign in as the **District Officer**. Sending a warning writes real notifications to everyone in that district.
+
+| ID | Test | Steps | Expected result | Result |
+| --- | --- | --- | --- | --- |
+| W-01 | District at registration | Create a new account. Leave District empty and tap **Create account**; then tap **Use my location**. | "Select a district." blocks the account. **Use my location** fills the district with "Suggested from your location: …", which you can still change. | |
+| W-02 | Existing user without a district | Sign in with an account created before this change (no district). | A **Home district** screen opens once with **Save** and **Later**. After **Later**, Home shows "Set your home district to receive warnings for your area." until it is set. | |
+| W-03 | Change district | Profile → **Home district** → **Change**, pick another district, **Save**. | Profile shows the new district. | |
+| W-04 | Warnings page | Web: open **Warnings** (District Officer only). | "Requests from escalated reports" lists pending requests (e.g. LS-SEED-010) with **Review and send** and **Decline**; "Sent warnings" lists past warnings. Other roles do not see the menu item. | |
+| W-05 | Review and send | Click **Review and send** on a Ratnapura request. | The form is pre-filled from the report (title "Flood warning: Ratnapura", message from the report text, severity, district). It shows "Sends to *N* people … whose home district is Ratnapura" and how many users have no district. | |
+| W-06 | Send | Keep the phone open, then click **Send warning**. | "Warning sent — Delivered to *N* of *N*". On the phone: a banner appears, the badge goes up, and the warning is in Notifications and Home → **Active warnings** with severity and "Active until …". The request leaves the queue; the warning is in "Sent warnings". | |
+| W-07 | Active until expiry | Open the warning on the phone (marks it read), then go back to Home. | It stays under **Active warnings** until its expiry time, then shows "Expired" in Notifications and leaves Home. | |
+| W-08 | Nobody in the district | **Issue warning** for a district with no users (e.g. Jaffna). | "No citizens or volunteers have Jaffna as their home district…" and **Send warning** is disabled. | |
+| W-09 | Decline | **Decline** a request without a reason, then with one. | "Explain why no warning is sent (at least 5 characters)." Then the request leaves the queue. | |
+| W-10 | Warning in analytics | Send a warning linked to "Ratnapura Floods — October 2026", then open that event in Disaster Analytics as the DMC Analyst. | **Alerts issued** goes up by 1 and **Citizens reached** by the number of recipients. | |
+
+---
+
+## 13. End-to-end scenario
 
 Run this once at the end with two people, or one person using the phone and the laptop. It walks through one disaster from the first report to the donor report.
 
@@ -472,7 +492,7 @@ Run this once at the end with two people, or one person using the phone and the 
 
 ---
 
-## 13. Deferred until the Android development build
+## 14. Deferred until the Android development build
 
 These can't be tested in Expo Go. They will be tested once the installable development build is ready.
 
@@ -483,7 +503,7 @@ These can't be tested in Expo Go. They will be tested once the installable devel
 
 ---
 
-## 14. Bug report template
+## 15. Bug report template
 
 Copy this for each problem you find:
 
@@ -516,4 +536,5 @@ Copy this for each problem you find:
 | 8 — Shelters (UC03) | 27 | | | | | | |
 | 9 — Analytics (UC04) | 20 | | | | | | |
 | 10 — Notifications | 18 | | | | | | |
+| District warnings | 10 | | | | | | |
 | End-to-end | 7 steps | | | | | | |

@@ -63,6 +63,16 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
+              name="set-district"
+              options={{
+                headerShown: true,
+                title: 'Home district',
+                headerTintColor: colors.primary,
+                headerTitleStyle: { fontFamily: INTER_FONTS.semiBold, color: colors.textPrimary },
+                headerStyle: { backgroundColor: colors.surface },
+              }}
+            />
+            <Stack.Screen
               name="location-picker"
               options={{
                 headerShown: true,

@@ -28,13 +28,19 @@ export function countUnread(notifications: readonly NotificationRecord[]): numbe
   return notifications.filter((n) => !n.read).length;
 }
 
-/** Unread warnings, newest first: the Home screen's "Active warnings". */
+/**
+ * The Home screen's "Active warnings", newest first. A warning with an expiry stays active until it
+ * expires, even after it is read (D49); older warnings without one count while unread.
+ */
 export function activeWarnings(
   notifications: readonly NotificationRecord[],
   limit = 3,
+  now: string = new Date().toISOString(),
 ): NotificationRecord[] {
   return sortNotificationsNewestFirst(
-    notifications.filter((n) => n.type === 'WARNING' && !n.read),
+    notifications.filter(
+      (n) => n.type === 'WARNING' && (n.expiresAt ? n.expiresAt > now : !n.read),
+    ),
   ).slice(0, limit);
 }
 

@@ -16,6 +16,9 @@ import { INTER_FONTS } from '@/theme/paperTheme';
 
 type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
 
+// Users asked for a home district this app session ("Later" is respected until the next launch).
+const askedForDistrict = new Set<string>();
+
 function tabIcon(activeName: IconName, inactiveName: IconName) {
   return function TabIcon({
     color,
@@ -34,6 +37,7 @@ function tabIcon(activeName: IconName, inactiveName: IconName) {
 export default function TabsLayout() {
   const queued = useOfflineQueueStore((s) => s.items.length);
   const uid = useAuthStore((s) => s.user?.uid);
+  const hasDistrict = useAuthStore((s) => !!s.user?.district);
   const attempt = useNotificationsStore((s) => s.attempt);
   const unread = useNotificationsStore((s) => countUnread(s.items));
   const fresh = useNotificationsStore((s) => s.fresh);
@@ -46,6 +50,14 @@ export default function TabsLayout() {
 
   // One live notification listener for the signed-in user; feeds the badge, list and Home (Phase 10).
   useEffect(() => (uid ? startNotificationsListener(uid) : undefined), [uid, attempt]);
+
+  // Accounts created before registration asked for a district: ask once per session (D48).
+  useEffect(() => {
+    if (uid && !hasDistrict && !askedForDistrict.has(uid)) {
+      askedForDistrict.add(uid);
+      router.push('/set-district');
+    }
+  }, [uid, hasDistrict]);
 
   return (
     <View style={styles.flex}>
