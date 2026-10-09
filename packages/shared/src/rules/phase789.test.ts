@@ -116,13 +116,7 @@ describe('findPossibleDuplicateShelter', () => {
 
   it('ignores other districts and the shelter being edited', () => {
     expect(
-      findPossibleDuplicateShelter(
-        'Horana Hall',
-        'Ratnapura',
-        'Horana Town',
-        undefined,
-        shelters,
-      ),
+      findPossibleDuplicateShelter('Horana Hall', 'Ratnapura', 'Horana Town', undefined, shelters),
     ).toBeUndefined();
     expect(
       findPossibleDuplicateShelter(

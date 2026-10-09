@@ -122,6 +122,7 @@ export function findPossibleDuplicateShelter<
       s.district === district &&
       normaliseName(s.name) === nameKey &&
       (normaliseName(s.address) === addressKey ||
-        (location !== undefined && distanceKm(s.location, location) <= DUPLICATE_SHELTER_RADIUS_KM)),
+        (location !== undefined &&
+          distanceKm(s.location, location) <= DUPLICATE_SHELTER_RADIUS_KM)),
   );
 }

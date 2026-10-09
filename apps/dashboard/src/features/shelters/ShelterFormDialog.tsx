@@ -78,7 +78,14 @@ export function ShelterFormDialog({
   });
   const duplicate =
     name && district && address
-      ? findPossibleDuplicateShelter(name, district, address, location, shelters, shelter?.shelterId)
+      ? findPossibleDuplicateShelter(
+          name,
+          district,
+          address,
+          location,
+          shelters,
+          shelter?.shelterId,
+        )
       : undefined;
 
   const syncLocationDetails = async (point: GeoPoint) => {
@@ -156,8 +163,8 @@ export function ShelterFormDialog({
           {error ? <Alert severity="error">{error}</Alert> : null}
           {duplicate ? (
             <Alert severity="warning">
-              Possible duplicate: {duplicate.name} is registered in {duplicate.district}. Confirm the
-              address and map location before registering.
+              Possible duplicate: {duplicate.name} is registered in {duplicate.district}. Confirm
+              the address and map location before registering.
             </Alert>
           ) : null}
 
