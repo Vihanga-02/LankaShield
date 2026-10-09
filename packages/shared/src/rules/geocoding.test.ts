@@ -3,8 +3,11 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   addressFromNominatim,
   districtFromNominatim,
+  locationFromNominatimSearch,
+  lookupAddress,
   lookupLocation,
   lookupDistrict,
+  nominatimAddressSearchUrl,
   nominatimLocationUrl,
   nominatimReverseUrl,
   type FetchLike,
@@ -31,6 +34,18 @@ const RATNAPURA_LOCATION = {
   ...RATNAPURA,
   display_name: 'Main Street, Ratnapura, Ratnapura District, Sabaragamuwa Province, Sri Lanka',
 };
+const MAPALAGAMA = [
+  {
+    lat: '6.1723',
+    lon: '80.2713',
+    address: {
+      village: 'Mapalagama',
+      state_district: 'Galle District',
+      'ISO3166-2-lvl5': 'LK-31',
+      country_code: 'lk',
+    },
+  },
+];
 
 const respond =
   (body: unknown, ok = true): FetchLike =>
@@ -114,5 +129,34 @@ describe('lookupLocation', () => {
 
   it('does not return incomplete details', () => {
     expect(addressFromNominatim(RATNAPURA)).toBeUndefined();
+  });
+});
+
+describe('lookupAddress', () => {
+  it('builds a Sri Lanka-only search using the selected district', () => {
+    const url = nominatimAddressSearchUrl('Mapalagama', 'Galle');
+    expect(url).toContain('q=Mapalagama%2C+Galle%2C+Sri+Lanka');
+    expect(url).toContain('countrycodes=lk');
+  });
+
+  it('returns a map point and district for a Sri Lankan address', async () => {
+    await expect(
+      lookupAddress('Mapalagama', {
+        district: 'Galle',
+        fetchFn: respond(MAPALAGAMA),
+        minIntervalMs: 0,
+      }),
+    ).resolves.toEqual({
+      point: { latitude: 6.1723, longitude: 80.2713 },
+      district: 'Galle',
+    });
+  });
+
+  it('ignores search results outside Sri Lanka', () => {
+    expect(
+      locationFromNominatimSearch([
+        { lat: '13.0827', lon: '80.2707', address: { country_code: 'in' } },
+      ]),
+    ).toBeUndefined();
   });
 });

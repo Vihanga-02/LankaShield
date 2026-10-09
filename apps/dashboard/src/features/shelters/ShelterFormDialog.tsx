@@ -4,6 +4,7 @@ import {
   districtMapCenter,
   findDuplicateShelterName,
   isWithinSriLanka,
+  lookupAddress,
   lookupLocation,
   shelterInputSchema,
   toErrorMessage,
@@ -50,6 +51,7 @@ export function ShelterFormDialog({
   const [closed, setClosed] = useState(shelter?.status === 'CLOSED');
   const [error, setError] = useState<string | null>(null);
   const [resolvingLocation, setResolvingLocation] = useState(false);
+  const [locationStatus, setLocationStatus] = useState<string | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const locationRequest = useRef(0);
 
@@ -81,6 +83,7 @@ export function ShelterFormDialog({
     setValue('location', point, { shouldDirty: true, shouldValidate: true });
     setLocationError(null);
     setResolvingLocation(true);
+    setLocationStatus('Updating address and district from the map location…');
 
     const details = await lookupLocation(point);
     if (request !== locationRequest.current) return;
@@ -94,6 +97,33 @@ export function ShelterFormDialog({
       );
     }
     setResolvingLocation(false);
+    setLocationStatus(null);
+  };
+
+  const findAddressLocation = async (address: string, selectedDistrict?: District) => {
+    const query = address.trim();
+    if (!query) return;
+
+    const request = ++locationRequest.current;
+    setLocationError(null);
+    setResolvingLocation(true);
+    setLocationStatus('Finding the address on the map…');
+
+    const result = await lookupAddress(query, { district: selectedDistrict });
+    if (request !== locationRequest.current) return;
+
+    if (result) {
+      setValue('location', result.point, { shouldDirty: true, shouldValidate: true });
+      if (result.district) {
+        setValue('district', result.district, { shouldDirty: true, shouldValidate: true });
+      }
+    } else {
+      setLocationError(
+        'Could not find this address in Sri Lanka. Use a more detailed address, or click or drag the marker to choose the location manually.',
+      );
+    }
+    setResolvingLocation(false);
+    setLocationStatus(null);
   };
 
   const onSubmit = handleSubmit(async (input) => {
@@ -187,7 +217,13 @@ export function ShelterFormDialog({
                     size="small"
                     label="Address"
                     error={!!fieldState.error}
-                    helperText={fieldState.error?.message}
+                    helperText={
+                      fieldState.error?.message ?? 'Leave this field to find the address on the map.'
+                    }
+                    onBlur={(event) => {
+                      field.onBlur();
+                      void findAddressLocation(event.currentTarget.value, district);
+                    }}
                     disabled={busy}
                   />
                 )}
@@ -261,42 +297,16 @@ export function ShelterFormDialog({
                   />
                 )}
               />
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={closed}
-                    onChange={(e) => setClosed(e.target.checked)}
-                    disabled={busy}
-                  />
-                }
-                label={closed ? 'Closed — cannot receive evacuees' : 'Open for allocations'}
-              />
-            </Stack>
+              <Controller
+                control={control}
+                name="location"
+                render={({ field }) => {
+                  const syncTypedLocation = () => {
+                    if (field.value) void syncLocationDetails(field.value);
+                  };
 
-            <Controller
-              control={control}
-              name="location"
-              render={({ field, fieldState }) => {
-                const syncTypedLocation = () => {
-                  if (field.value) void syncLocationDetails(field.value);
-                };
-
-                return (
-                  <Box>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Location
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary" gutterBottom>
-                      Click the map or drag the marker to update the address and district
-                      automatically.
-                    </Typography>
-                    <PointMap
-                      point={field.value}
-                      onPick={busy ? undefined : syncLocationDetails}
-                      height={420}
-                      zoom={13}
-                    />
-                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1.5 }}>
+                  return (
+                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
                       <TextField
                         size="small"
                         label="Latitude"
@@ -326,6 +336,40 @@ export function ShelterFormDialog({
                         disabled={busy}
                       />
                     </Box>
+                  );
+                }}
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={closed}
+                    onChange={(e) => setClosed(e.target.checked)}
+                    disabled={busy}
+                  />
+                }
+                label={closed ? 'Closed — cannot receive evacuees' : 'Open for allocations'}
+              />
+            </Stack>
+
+            <Controller
+              control={control}
+              name="location"
+              render={({ field, fieldState }) => {
+                return (
+                  <Box>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Location
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary" gutterBottom>
+                      Click the map or drag the marker to update the address and district
+                      automatically.
+                    </Typography>
+                    <PointMap
+                      point={field.value}
+                      onPick={busy ? undefined : syncLocationDetails}
+                      height={420}
+                      zoom={13}
+                    />
                     {fieldState.error ? (
                       <Typography variant="caption" color="error">
                         {fieldState.error.message ?? 'Select the shelter location.'}
@@ -333,7 +377,7 @@ export function ShelterFormDialog({
                     ) : null}
                     {resolvingLocation ? (
                       <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
-                        Updating address and district from the map location…
+                        {locationStatus}
                       </Typography>
                     ) : null}
                     {locationError ? (
