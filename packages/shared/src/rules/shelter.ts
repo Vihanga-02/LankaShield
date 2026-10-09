@@ -1,7 +1,8 @@
 import { AppError } from '../constants/errors';
 import { SHELTER_NEARLY_FULL_RATIO } from '../constants/limits';
 import type { ShelterStatus } from '../enums';
-import type { EmergencyShelter, OccupancyRecord } from '../models';
+import type { EmergencyShelter, GeoPoint, OccupancyRecord } from '../models';
+import { distanceKm } from './duplicates';
 
 export function calculateAvailableCapacity(capacity: number, currentOccupancy: number): number {
   return Math.max(0, capacity - currentOccupancy);
@@ -96,20 +97,32 @@ export function findAlternativeShelters<T extends ShelterCapacity>(
 }
 
 const normaliseName = (name: string) => name.trim().toLowerCase().replace(/\s+/g, ' ');
+const DUPLICATE_SHELTER_RADIUS_KM = 0.1;
 
-/** Another shelter in the same district with the same name (case/space-insensitive), if any. */
-export function findDuplicateShelterName<
-  T extends Pick<EmergencyShelter, 'shelterId' | 'name' | 'district'>,
+/**
+ * Another shelter that has the same name and district, and also the same address or a marker
+ * within 100 metres. This deliberately returns a possible duplicate, not a registration block.
+ */
+export function findPossibleDuplicateShelter<
+  T extends Pick<EmergencyShelter, 'shelterId' | 'name' | 'district' | 'address' | 'location'>,
 >(
   name: string,
   district: string,
+  address: string,
+  location: GeoPoint | undefined,
   shelters: readonly T[],
   excludeShelterId?: string,
 ): T | undefined {
-  const key = normaliseName(name);
-  if (!key) return undefined;
+  const nameKey = normaliseName(name);
+  const addressKey = normaliseName(address);
+  if (!nameKey || !addressKey) return undefined;
   return shelters.find(
     (s) =>
-      s.shelterId !== excludeShelterId && s.district === district && normaliseName(s.name) === key,
+      s.shelterId !== excludeShelterId &&
+      s.district === district &&
+      normaliseName(s.name) === nameKey &&
+      (normaliseName(s.address) === addressKey ||
+        (location !== undefined &&
+          distanceKm(s.location, location) <= DUPLICATE_SHELTER_RADIUS_KM)),
   );
 }

@@ -5,6 +5,9 @@ import { isWithinSriLanka, matchDistrict } from './location';
 /** OpenStreetMap's public reverse geocoder. Usage policy: at most one request per second. */
 export const NOMINATIM_REVERSE_URL = 'https://nominatim.openstreetmap.org/reverse';
 
+/** OpenStreetMap's public address search endpoint. */
+export const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search';
+
 /** ISO 3166-2:LK district codes, which Nominatim returns as `ISO3166-2-lvl5`. */
 const ISO_DISTRICTS: Record<string, District> = {
   'LK-11': 'Colombo',
@@ -54,6 +57,20 @@ export function nominatimLocationUrl(point: GeoPoint): string {
   return nominatimUrl(point, 18);
 }
 
+/** Builds a Sri Lanka-only search URL, using the selected district to disambiguate place names. */
+export function nominatimAddressSearchUrl(address: string, district?: District): string {
+  const query = [address.trim(), district, 'Sri Lanka'].filter(Boolean).join(', ');
+  const params = new URLSearchParams({
+    format: 'jsonv2',
+    q: query,
+    countrycodes: 'lk',
+    addressdetails: '1',
+    limit: '1',
+    'accept-language': 'en',
+  });
+  return `${NOMINATIM_SEARCH_URL}?${params.toString()}`;
+}
+
 /**
  * The district in a Nominatim reverse-geocoding response: the district name first
  * ("Ratnapura District"), then the ISO district code (LK-91). Undefined for points at sea,
@@ -93,10 +110,17 @@ let nextRequestAt = 0;
 async function reverseLookup(
   point: GeoPoint,
   url: string,
-  { fetchFn = fetch, headers, timeoutMs = 8_000, minIntervalMs = 1_000 }: LookupOptions = {},
+  options: LookupOptions = {},
 ): Promise<unknown | undefined> {
   if (!isWithinSriLanka(point)) return undefined;
 
+  return nominatimLookup(url, options);
+}
+
+async function nominatimLookup(
+  url: string,
+  { fetchFn = fetch, headers, timeoutMs = 8_000, minIntervalMs = 1_000 }: LookupOptions = {},
+): Promise<unknown | undefined> {
   const now = Date.now();
   const wait = nextRequestAt - now;
   nextRequestAt = Math.max(now, nextRequestAt) + minIntervalMs;
@@ -136,4 +160,45 @@ export async function lookupLocation(
   const address = addressFromNominatim(response);
   const district = districtFromNominatim(response);
   return address && district ? { address, district } : undefined;
+}
+
+export interface AddressLookupOptions extends LookupOptions {
+  /** Narrows a place-name search to the district the user has selected. */
+  district?: District;
+}
+
+export interface AddressLocation {
+  point: GeoPoint;
+  district?: District;
+}
+
+/** Reads the first valid Sri Lankan point from a Nominatim address-search response. */
+export function locationFromNominatimSearch(response: unknown): AddressLocation | undefined {
+  if (!Array.isArray(response)) return undefined;
+
+  for (const result of response) {
+    if (!result || typeof result !== 'object') continue;
+    const { lat, lon } = result as Record<string, unknown>;
+    const latitude = typeof lat === 'string' || typeof lat === 'number' ? Number(lat) : NaN;
+    const longitude = typeof lon === 'string' || typeof lon === 'number' ? Number(lon) : NaN;
+    const point = { latitude, longitude };
+    if (Number.isFinite(latitude) && Number.isFinite(longitude) && isWithinSriLanka(point)) {
+      return { point, district: districtFromNominatim(result) };
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Finds a Sri Lankan place from an address entered in a form. The selected district is used as
+ * search context, while the returned point remains available for the user to adjust on the map.
+ */
+export async function lookupAddress(
+  address: string,
+  { district, ...options }: AddressLookupOptions = {},
+): Promise<AddressLocation | undefined> {
+  if (!address.trim()) return undefined;
+  const response = await nominatimLookup(nominatimAddressSearchUrl(address, district), options);
+  return locationFromNominatimSearch(response);
 }

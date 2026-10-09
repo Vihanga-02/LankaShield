@@ -8,7 +8,7 @@ import {
   verificationOutcomes,
 } from './analyticsCharts';
 import { distanceKm, findPossibleDuplicates } from './duplicates';
-import { findDuplicateShelterName } from './shelter';
+import { findPossibleDuplicateShelter } from './shelter';
 
 function report(id: string, overrides: Partial<HazardReport> = {}): HazardReport {
   return {
@@ -60,21 +60,74 @@ describe('findPossibleDuplicates', () => {
   });
 });
 
-describe('findDuplicateShelterName', () => {
-  const shelters: Pick<EmergencyShelter, 'shelterId' | 'name' | 'district'>[] = [
-    { shelterId: 's1', name: 'Ratnapura Central College', district: 'Ratnapura' },
-    { shelterId: 's2', name: 'Horana Hall', district: 'Kalutara' },
+describe('findPossibleDuplicateShelter', () => {
+  const shelters: Pick<
+    EmergencyShelter,
+    'shelterId' | 'name' | 'district' | 'address' | 'location'
+  >[] = [
+    {
+      shelterId: 's1',
+      name: 'Ratnapura Central College',
+      district: 'Ratnapura',
+      address: 'Main Street, Ratnapura',
+      location: { latitude: 6.6828, longitude: 80.3992 },
+    },
+    {
+      shelterId: 's2',
+      name: 'Horana Hall',
+      district: 'Kalutara',
+      address: 'Horana Town',
+      location: { latitude: 6.7167, longitude: 80.0622 },
+    },
   ];
 
-  it('matches names case- and space-insensitively within the same district', () => {
+  it('matches same-name shelters only when the address also matches', () => {
     expect(
-      findDuplicateShelterName('  ratnapura  central college', 'Ratnapura', shelters)?.shelterId,
+      findPossibleDuplicateShelter(
+        '  ratnapura  central college',
+        'Ratnapura',
+        '  Main Street, Ratnapura ',
+        undefined,
+        shelters,
+      )?.shelterId,
     ).toBe('s1');
   });
 
+  it('matches same-name shelters with nearby markers, but not those at another location', () => {
+    expect(
+      findPossibleDuplicateShelter(
+        'Ratnapura Central College',
+        'Ratnapura',
+        'Other address',
+        { latitude: 6.6829, longitude: 80.3992 },
+        shelters,
+      )?.shelterId,
+    ).toBe('s1');
+    expect(
+      findPossibleDuplicateShelter(
+        'Ratnapura Central College',
+        'Ratnapura',
+        'Other address',
+        { latitude: 6.7, longitude: 80.4 },
+        shelters,
+      ),
+    ).toBeUndefined();
+  });
+
   it('ignores other districts and the shelter being edited', () => {
-    expect(findDuplicateShelterName('Horana Hall', 'Ratnapura', shelters)).toBeUndefined();
-    expect(findDuplicateShelterName('Horana Hall', 'Kalutara', shelters, 's2')).toBeUndefined();
+    expect(
+      findPossibleDuplicateShelter('Horana Hall', 'Ratnapura', 'Horana Town', undefined, shelters),
+    ).toBeUndefined();
+    expect(
+      findPossibleDuplicateShelter(
+        'Horana Hall',
+        'Kalutara',
+        'Horana Town',
+        undefined,
+        shelters,
+        's2',
+      ),
+    ).toBeUndefined();
   });
 });
 
