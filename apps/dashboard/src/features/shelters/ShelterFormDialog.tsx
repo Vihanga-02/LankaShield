@@ -148,7 +148,7 @@ export function ShelterFormDialog({
       <DialogTitle sx={{ color: 'primary.main' }}>
         {editing ? `Edit ${shelter.name}` : 'Register shelter'}
       </DialogTitle>
-      <DialogContent dividers sx={{ py: 3 }}>
+      <DialogContent dividers sx={{ py: 1.5 }}>
         <Stack component="form" id="shelter-form" spacing={2.5} noValidate onSubmit={onSubmit}>
           {error ? <Alert severity="error">{error}</Alert> : null}
           {duplicate ? (
@@ -162,10 +162,10 @@ export function ShelterFormDialog({
             sx={{
               display: 'grid',
               gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(360px, 1fr)' },
-              gap: 3,
+              gap: 2,
               alignItems: 'start',
             }}>
-            <Stack spacing={2}>
+            <Stack spacing={1}>
               <Controller
                 control={control}
                 name="name"
@@ -217,9 +217,7 @@ export function ShelterFormDialog({
                     size="small"
                     label="Address"
                     error={!!fieldState.error}
-                    helperText={
-                      fieldState.error?.message ?? 'Leave this field to find the address on the map.'
-                    }
+                    helperText={fieldState.error?.message}
                     onBlur={(event) => {
                       field.onBlur();
                       void findAddressLocation(event.currentTarget.value, district);
@@ -361,13 +359,12 @@ export function ShelterFormDialog({
                       Location
                     </Typography>
                     <Typography variant="body2" color="textSecondary" gutterBottom>
-                      Click the map or drag the marker to update the address and district
-                      automatically.
+                      Enter an address, or click or drag the marker to update the location.
                     </Typography>
                     <PointMap
                       point={field.value}
                       onPick={busy ? undefined : syncLocationDetails}
-                      height={420}
+                      height={360}
                       zoom={13}
                     />
                     {fieldState.error ? (
