@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { useNetworkState } from 'expo-network';
 import { router } from 'expo-router';
 import { PaperProvider } from 'react-native-paper';
@@ -48,7 +48,17 @@ const renderScreen = () =>
   );
 
 describe('ReportScreen (UC01 report form validation)', () => {
+  // Paper animates validation messages and banners on timers. With fake timers those frames only
+  // run when the testing library advances time inside act(), so no update escapes a test step.
+  afterEach(async () => {
+    await act(async () => {
+      jest.runOnlyPendingTimers();
+    });
+    jest.useRealTimers();
+  });
+
   beforeEach(() => {
+    jest.useFakeTimers();
     submit.mockReset();
     locate.mockReset();
     jest.mocked(router.push).mockReset();
