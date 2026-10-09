@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
   DISTRICTS,
   districtMapCenter,
-  findDuplicateShelterName,
+  findPossibleDuplicateShelter,
   isWithinSriLanka,
   lookupAddress,
   lookupLocation,
@@ -72,10 +72,13 @@ export function ShelterFormDialog({
         }
       : { name: '', address: '', currentOccupancy: 0, contactName: '', contactPhone: '' },
   });
-  const [name, district] = useWatch({ control, name: ['name', 'district'] });
+  const [name, district, address, location] = useWatch({
+    control,
+    name: ['name', 'district', 'address', 'location'],
+  });
   const duplicate =
-    name && district
-      ? findDuplicateShelterName(name, district, shelters, shelter?.shelterId)
+    name && district && address
+      ? findPossibleDuplicateShelter(name, district, address, location, shelters, shelter?.shelterId)
       : undefined;
 
   const syncLocationDetails = async (point: GeoPoint) => {
@@ -153,8 +156,8 @@ export function ShelterFormDialog({
           {error ? <Alert severity="error">{error}</Alert> : null}
           {duplicate ? (
             <Alert severity="warning">
-              A shelter named “{duplicate.name}” is already registered in {duplicate.district}.
-              Check that this is not the same shelter.
+              Possible duplicate: {duplicate.name} is registered in {duplicate.district}. Confirm the
+              address and map location before registering.
             </Alert>
           ) : null}
 
